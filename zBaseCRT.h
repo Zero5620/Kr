@@ -5,9 +5,9 @@
 extern "C" {
 #endif
 
-	log_agent GetCrtLogAgent();
-	fatal_error_procedure GetCrtFatalErrorProcedure();
-	memory_allocator GetCrtMemoryAllocator();
+	Log_Agent GetCrtLogAgent();
+	Fatal_Error_Procedure GetCrtFatalErrorProcedure();
+	Memory_Allocator GetCrtMemoryAllocator();
 	void InitThreadContextCrt(uint32_t scratchpad_size);
 
 #if defined(__cplusplus)

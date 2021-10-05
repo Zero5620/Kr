@@ -5,18 +5,18 @@
 extern "C" {
 #endif
 
-	thread_local thread_context ThreadContext;
+	thread_local Thread_Context ThreadContext;
 
-	uint8 *AlignPointer(uint8 *location, ptrsize alignment) {
-		return (uint8_t *)((ptrsize)(location + (alignment - 1)) & ~(alignment - 1));
+	Uint8 *AlignPointer(Uint8 *location, Ptrsize alignment) {
+		return (uint8_t *)((Ptrsize)(location + (alignment - 1)) & ~(alignment - 1));
 	}
 
-	ptrsize AlignSize(ptrsize location, ptrsize alignment) {
+	Ptrsize AlignSize(Ptrsize location, Ptrsize alignment) {
 		return ((location + (alignment - 1)) & ~(alignment - 1));
 	}
 
-	memory_arena MemoryArenaCreate(ptrsize max_size) {
-		memory_arena arena;
+	Memory_Arena MemoryArenaCreate(Ptrsize max_size) {
+		Memory_Arena arena;
 		arena.Reserved = max_size;
 		arena.Memory = VirtualMemoryAllocate(0, arena.Reserved);
 		arena.CommitPos = 0;
@@ -24,21 +24,21 @@ extern "C" {
 		return arena;
 	}
 
-	void MemoryArenaDestroy(memory_arena *arena) {
+	void MemoryArenaDestroy(Memory_Arena *arena) {
 		VirtualMemoryFree(arena->Memory);
 	}
 
-	void MemoryArenaReset(memory_arena *arena) {
+	void MemoryArenaReset(Memory_Arena *arena) {
 		arena->CurrentPos = 0;
 	}
 
-	void *PushSize(memory_arena *arena, ptrsize size) {
+	void *PushSize(Memory_Arena *arena, Ptrsize size) {
 		void *ptr = 0;
 		if (arena->CurrentPos + size <= arena->Reserved) {
 			ptr = arena->Memory + arena->CurrentPos;
 			arena->CurrentPos += size;
 			if (arena->CurrentPos > arena->CommitPos) {
-				ptrsize CommitPos = AlignPower2Up(arena->CurrentPos, MEMORY_ALLOCATOR_COMMIT_SIZE - 1);
+				Ptrsize CommitPos = AlignPower2Up(arena->CurrentPos, MEMORY_ALLOCATOR_COMMIT_SIZE - 1);
 				CommitPos = Minimum(CommitPos, arena->Reserved);
 				VirtualMemoryCommit(arena->Memory + arena->CommitPos, CommitPos - arena->CommitPos);
 				arena->CommitPos = CommitPos;
@@ -47,15 +47,15 @@ extern "C" {
 		return ptr;
 	}
 
-	void *PushSizeAligned(memory_arena *arena, ptrsize size, uint32 alignment) {
-		ptrsize alloc_size = AlignSize(arena->CurrentPos, alignment) - arena->CurrentPos + size;
+	void *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment) {
+		Ptrsize alloc_size = AlignSize(arena->CurrentPos, alignment) - arena->CurrentPos + size;
 		return PushSize(arena, size);
 	}
 
-	void SetAllocationPosition(memory_arena *arena, ptrsize pos) {
+	void SetAllocationPosition(Memory_Arena *arena, Ptrsize pos) {
 		if (pos < arena->CurrentPos) {
 			arena->CurrentPos = pos;
-			ptrsize CommitPos = AlignPower2Up(pos, MEMORY_ALLOCATOR_COMMIT_SIZE - 1);
+			Ptrsize CommitPos = AlignPower2Up(pos, MEMORY_ALLOCATOR_COMMIT_SIZE - 1);
 			CommitPos = Minimum(CommitPos, arena->Reserved);
 
 			if (CommitPos < arena->CommitPos) {
@@ -65,28 +65,28 @@ extern "C" {
 		}
 	}
 
-	temporary_memory BeginTemporaryMemory(memory_arena *arena) {
-		temporary_memory mem;
+	Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena) {
+		Temporary_Memory mem;
 		mem.Arena = arena;
 		mem.Position = arena->CurrentPos;
 		return mem;
 	}
 
-	void  EndTemporaryMemory(temporary_memory *temp) {
+	void  EndTemporaryMemory(Temporary_Memory *temp) {
 		temp->Arena->CurrentPos = temp->Position;
 	}
 
-	void FreeTemporaryMemory(temporary_memory *temp) {
+	void FreeTemporaryMemory(Temporary_Memory *temp) {
 		SetAllocationPosition(temp->Arena, temp->Position);
 	}
 
-	static void *MemoryArenaAllocatorAllocate(ptrsize size, void *context) {
-		memory_arena *arena = (memory_arena *)context;
-		return PushSizeAligned(arena, size, sizeof(ptrsize));
+	static void *MemoryArenaAllocatorAllocate(Ptrsize size, void *context) {
+		Memory_Arena *arena = (Memory_Arena *)context;
+		return PushSizeAligned(arena, size, sizeof(Ptrsize));
 	}
 
-	static void *MemoryArenaAllocatorReallocate(void *ptr, ptrsize previous_size, ptrsize new_size, void *context) {
-		memory_arena *arena = (memory_arena *)context;
+	static void *MemoryArenaAllocatorReallocate(void *ptr, Ptrsize previous_size, Ptrsize new_size, void *context) {
+		Memory_Arena *arena = (Memory_Arena *)context;
 
 		if (previous_size > new_size) return ptr;
 
@@ -95,15 +95,15 @@ extern "C" {
 			return ptr;
 		}
 
-		void *new_ptr = PushSizeAligned(arena, new_size, sizeof(ptrsize));
+		void *new_ptr = PushSizeAligned(arena, new_size, sizeof(Ptrsize));
 		memmove(ptr, new_ptr, previous_size);
 		return new_ptr;
 	}
 
 	static void MemoryArenaAllocatorFree(void *ptr, void *context) {}
 
-	memory_allocator MemoryArenaAllocator(memory_arena *arena) {
-		memory_allocator allocator;
+	Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena) {
+		Memory_Allocator allocator;
 		allocator.Allocate = MemoryArenaAllocatorAllocate;
 		allocator.Reallocate = MemoryArenaAllocatorReallocate;
 		allocator.Free = MemoryArenaAllocatorFree;
@@ -111,7 +111,7 @@ extern "C" {
 		return allocator;
 	}
 
-	memory_arena *ThreadScratchpad() {
+	Memory_Arena *ThreadScratchpad() {
 		for (uint32_t index = 0; ArrayCount(ThreadContext.Scratchpad.Arena); ++index) {
 			if (&ThreadContext.Scratchpad.Arena[index] != ThreadContext.Allocator.Context) {
 				return &ThreadContext.Scratchpad.Arena[index];
@@ -126,8 +126,8 @@ extern "C" {
 		}
 	}
 
-	memory_allocator ThreadScratchpadAllocator() {
-		memory_arena *arena = ThreadScratchpad();
+	Memory_Allocator ThreadScratchpadAllocator() {
+		Memory_Arena *arena = ThreadScratchpad();
 		return MemoryArenaAllocator(arena);
 	}
 
@@ -168,11 +168,11 @@ extern "C" {
 		va_end(args);
 	}
 
-	void InitThreadContext(memory_allocator allocator, uint32_t scratchpad_size, log_agent logger, fatal_error_procedure fatal_error) {
+	void InitThreadContext(Memory_Allocator allocator, uint32_t scratchpad_size, Log_Agent logger, Fatal_Error_Procedure fatal_error) {
 		ThreadContext.Allocator = allocator;
 
 		if (scratchpad_size) {
-			for (uint32 index = 0; index < ArrayCount(ThreadContext.Scratchpad.Arena); ++index) {
+			for (Uint32 index = 0; index < ArrayCount(ThreadContext.Scratchpad.Arena); ++index) {
 				ThreadContext.Scratchpad.Arena[index] = MemoryArenaCreate(scratchpad_size);
 			}
 		} else {
@@ -205,15 +205,15 @@ extern "C" {
 #define MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS 0
 #include <Windows.h>
 
-	void *VirtualMemoryAllocate(void *ptr, ptrsize size) {
+	void *VirtualMemoryAllocate(void *ptr, Ptrsize size) {
 		return VirtualAlloc(ptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	}
 
-	void *VirtualMemoryCommit(void *ptr, ptrsize size) {
+	void *VirtualMemoryCommit(void *ptr, Ptrsize size) {
 		return VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
 	}
 
-	bool VirtualMemoryDecommit(void *ptr, ptrsize size) {
+	bool VirtualMemoryDecommit(void *ptr, Ptrsize size) {
 		return VirtualFree(ptr, size, MEM_DECOMMIT);
 	}
 

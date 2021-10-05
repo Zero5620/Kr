@@ -175,24 +175,19 @@ do {          \
 //
 //
 
-typedef uint8_t  uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-typedef int8_t   int8;
-typedef int16_t  int16;
-typedef int32_t  int32;
-typedef int64_t  int64;
-typedef float    real32;
-typedef double   real64;
-typedef size_t   ptrsize;
-
-//
-//
-//
-
-#define _zConcatInternal(x, y) x##y
-#define _zConcat(x, y)         _zConcatInternal(x, y)
+typedef uint8_t  Uint8;
+typedef uint16_t Uint16;
+typedef uint32_t Uint32;
+typedef uint64_t Uint64;
+typedef int8_t   Int8;
+typedef int16_t  Int16;
+typedef int32_t  Int32;
+typedef int64_t  Int64;
+typedef float    Real32;
+typedef double   Real64;
+typedef size_t   Ptrsize;
+typedef int32_t  Int;
+typedef float    Real;
 
 //
 //
@@ -227,84 +222,84 @@ typedef size_t   ptrsize;
 extern "C" {
 #endif
 
-	uint8 *AlignPointer(uint8 *location, ptrsize alignment);
-	ptrsize   AlignSize(ptrsize location, ptrsize alignment);
+	Uint8 *AlignPointer(Uint8 *location, Ptrsize alignment);
+	Ptrsize   AlignSize(Ptrsize location, Ptrsize alignment);
 
-	typedef struct memory_arena {
-		ptrsize CurrentPos;
-		ptrsize CommitPos;
-		ptrsize Reserved;
-		uint8 *Memory;
-	} memory_arena;
+	typedef struct Memory_Arena {
+		Ptrsize CurrentPos;
+		Ptrsize CommitPos;
+		Ptrsize Reserved;
+		Uint8 *Memory;
+	} Memory_Arena;
 
-	memory_arena MemoryArenaCreate(ptrsize max_size);
-	void MemoryArenaDestroy(memory_arena *arena);
-	void MemoryArenaReset(memory_arena *arena);
+	Memory_Arena MemoryArenaCreate(Ptrsize max_size);
+	void MemoryArenaDestroy(Memory_Arena *arena);
+	void MemoryArenaReset(Memory_Arena *arena);
 
-	void *PushSize(memory_arena *arena, ptrsize size);
-	void *PushSizeAligned(memory_arena *arena, ptrsize size, uint32 alignment);
-	void SetAllocationPosition(memory_arena *arena, ptrsize pos);
+	void *PushSize(Memory_Arena *arena, Ptrsize size);
+	void *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment);
+	void SetAllocationPosition(Memory_Arena *arena, Ptrsize pos);
 
 #define PushType(arena, type) (type *)PushSize(arena, sizeof(type))
 #define PushArray(arena, type, count) (type *)PushSize(arena, sizeof(type) * count)
 #define PushArrayAligned(arena, type, count, alignment) (type *)PushSizeAligned(arena, sizeof(type) * count, alignment)
 
-	typedef struct temporary_memory {
-		memory_arena *Arena;
-		ptrsize Position;
-	} temporary_memory;
+	typedef struct Temporary_Memory {
+		Memory_Arena *Arena;
+		Ptrsize Position;
+	} Temporary_Memory;
 
-	temporary_memory BeginTemporaryMemory(memory_arena *arena);
-	void  EndTemporaryMemory(temporary_memory *temp);
-	void FreeTemporaryMemory(temporary_memory *temp);
+	Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena);
+	void  EndTemporaryMemory(Temporary_Memory *temp);
+	void FreeTemporaryMemory(Temporary_Memory *temp);
 
-	typedef void *(*memory_allocate)(ptrsize size, void *context);
-	typedef void *(*memory_reallocate)(void *ptr, ptrsize previous_size, ptrsize new_size, void *context);
-	typedef void (*memory_free)(void *ptr, void *context);
+	typedef void *(*Memory_Allocate)(Ptrsize size, void *context);
+	typedef void *(*Memory_Reallocate)(void *ptr, Ptrsize previous_size, Ptrsize new_size, void *context);
+	typedef void (*Memory_Free)(void *ptr, void *context);
 
-	typedef struct memory_allocator {
-		memory_allocate Allocate;
-		memory_reallocate Reallocate;
-		memory_free Free;
+	typedef struct Memory_Allocator {
+		Memory_Allocate Allocate;
+		Memory_Reallocate Reallocate;
+		Memory_Free Free;
 		void *Context;
-	} memory_allocator;
+	} Memory_Allocator;
 
-	memory_allocator MemoryArenaAllocator(memory_arena *arena);
+	Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);
 
-	typedef enum log_kind {
+	typedef enum Log_Kind {
 		Log_Kind_Info,
 		Log_Kind_Warn,
 		Log_Kind_Error
-	} log_kind;
+	} Log_Kind;
 
-	typedef void (*log_procedure)(void *agent, log_kind kind, const char *fmt, va_list list);
-	typedef void (*fatal_error_procedure)(const char *message);
+	typedef void (*Log_Procedure)(void *agent, Log_Kind kind, const char *fmt, va_list list);
+	typedef void (*Fatal_Error_Procedure)(const char *message);
 
-	typedef struct log_agent {
-		log_procedure	Procedure;
+	typedef struct Log_Agent {
+		Log_Procedure	Procedure;
 		void *Data;
-	} log_agent;
+	} Log_Agent;
 
-	typedef struct scratchpad {
-		memory_arena Arena[2];
-	} scratchpad;
+	typedef struct Scratchpad {
+		Memory_Arena Arena[2];
+	} Scratchpad;
 
-	typedef struct thread_context {
-		memory_allocator      Allocator;
-		scratchpad			  Scratchpad;
-		log_agent			  LogAgent;
-		fatal_error_procedure FatalError;
-	} thread_context;
+	typedef struct Thread_Context {
+		Memory_Allocator      Allocator;
+		Scratchpad			  Scratchpad;
+		Log_Agent			  LogAgent;
+		Fatal_Error_Procedure FatalError;
+	} Thread_Context;
 
-	extern thread_local thread_context ThreadContext;
+	extern thread_local Thread_Context ThreadContext;
 
 	//
 	//
 	//
 
-	memory_arena *ThreadScratchpad();
+	Memory_Arena *ThreadScratchpad();
 	void ResetThreadScratchpad();
-	memory_allocator ThreadScratchpadAllocator();
+	Memory_Allocator ThreadScratchpadAllocator();
 
 	void FatalError(const char *msg);
 
@@ -315,7 +310,7 @@ extern "C" {
 	void LogWarn(const char *fmt, ...);
 	void LogError(const char *fmt, ...);
 
-	void InitThreadContext(memory_allocator allocator, uint32_t scratchpad_size, log_agent logger, fatal_error_procedure fatal_error);
+	void InitThreadContext(Memory_Allocator allocator, uint32_t scratchpad_size, Log_Agent logger, Fatal_Error_Procedure fatal_error);
 
 	//
 	//
@@ -327,9 +322,9 @@ extern "C" {
 	//
 	//
 
-	void *VirtualMemoryAllocate(void *ptr, ptrsize size);
-	void *VirtualMemoryCommit(void *ptr, ptrsize size);
-	bool VirtualMemoryDecommit(void *ptr, ptrsize size);
+	void *VirtualMemoryAllocate(void *ptr, Ptrsize size);
+	void *VirtualMemoryCommit(void *ptr, Ptrsize size);
+	bool VirtualMemoryDecommit(void *ptr, Ptrsize size);
 	bool VirtualMemoryFree(void *ptr);
 
 #if defined(__cplusplus)
@@ -337,60 +332,45 @@ extern "C" {
 #endif
 
 typedef struct String {
-	int64_t  Length;
-	uint8_t *Data;
+	Int64  Length;
+	Uint8 *Data;
 
 #if defined(__cplusplus)
 	String() : Data(0), Length(0) {}
-	template <int64_t _Length>
+	template <Int64 _Length>
 	constexpr String(const char(&a)[_Length]) : Data((uint8_t *)a), Length(_Length - 1) {}
-	String(const uint8_t *_Data, int64_t _Length) : Data((uint8_t *)_Data), Length(_Length) {}
-	const uint8_t &operator[](const int64_t index) const {
+	String(const Uint8 *_Data, Int64 _Length) : Data((uint8_t *)_Data), Length(_Length) {}
+	const Uint8 &operator[](const Int64 index) const {
 		Assert(index < Length);
 		return Data[index];
 	}
-	uint8_t &operator[](const int64_t index) {
+	Uint8 &operator[](const Int64 index) {
 		Assert(index < Length);
 		return Data[index];
 	}
 #endif
 } String;
-#define StringLiteral(lit) (String) { lit, (int64_t)(sizeof(lit) - 1) }
+#define StringLiteral(lit) (String) { lit, (Int64)(sizeof(lit) - 1) }
 
 
 #if defined(__cplusplus)
 
+#define _zConcatInternal(x, y) x##y
+#define _zConcat(x, y)         _zConcatInternal(x, y)
+
 template <typename T>
-struct z_exit_scope {
+struct Exit_Scope {
 	T lambda;
-	z_exit_scope(T lambda) : lambda(lambda) {}
-	~z_exit_scope() { lambda(); }
+	Exit_Scope(T lambda) : lambda(lambda) {}
+	~Exit_Scope() { lambda(); }
 };
-struct z_exit_scope_help {
+struct Exit_Scope_Help {
 	template <typename T>
-	z_exit_scope<T> operator+(T t) {
+	Exit_Scope<T> operator+(T t) {
 		return t;
 	}
 };
-#define Defer const auto &_zConcat(defer__, __LINE__) = z_exit_scope_help() + [&]()
-
-
-struct scoped_scratchpad {
-	temporary_memory Scratchpad;
-
-	scoped_scratchpad() {
-		memory_arena *arena = ThreadScratchpad();
-		Scratchpad = BeginTemporaryMemory(arena);
-	}
-	~scoped_scratchpad() {
-		EndTemporaryMemory(&Scratchpad);
-	}
-
-	memory_arena *operator&() {
-		return Scratchpad.Arena;
-	}
-};
-
+#define Defer const auto &_zConcat(defer__, __LINE__) = Exit_Scope_Help() + [&]()
 
 inline void *MemoryAllocate(ptrsize size, memory_allocator &allocator = ThreadContext.Allocator) {
 	allocator.Allocate(size, allocator.Context);

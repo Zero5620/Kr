@@ -390,15 +390,15 @@ struct Exit_Scope_Help {
 };
 #define Defer const auto &_zConcat(defer__, __LINE__) = Exit_Scope_Help() + [&]()
 
-inline void *MemoryAllocate(ptrsize size, memory_allocator &allocator = ThreadContext.Allocator) {
+inline void *MemoryAllocate(Ptrsize size, Memory_Allocator &allocator = ThreadContext.Allocator) {
 	allocator.Allocate(size, allocator.Context);
 }
 
-inline void *MemoryReallocate(ptrsize old_size, ptrsize new_size, void *ptr, memory_allocator &allocator = ThreadContext.Allocator) {
+inline void *MemoryReallocate(Ptrsize old_size, Ptrsize new_size, void *ptr, Memory_Allocator &allocator = ThreadContext.Allocator) {
 	allocator.Reallocate(ptr, old_size, new_size, allocator.Context);
 }
 
-inline void MemoryFree(void *ptr, memory_allocator &allocator = ThreadContext.Allocator) {
+inline void MemoryFree(void *ptr, Memory_Allocator &allocator = ThreadContext.Allocator) {
 	allocator.Free(ptr, allocator.Context);
 }
 

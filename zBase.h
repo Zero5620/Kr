@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdint.h>
+#include <stddef.h>
 #if !defined(__cplusplus)
 #include <stdbool.h>
 #endif
@@ -134,13 +135,6 @@
 #define TriggerBreakpoint() ((int *)0) = 0
 #endif
 
-#define Unimplemented() TriggerBreakpoint()
-#define Unreachable()   TriggerBreakpoint()
-#define NoDefaultCase()      \
-default:                 \
-TriggerBreakpoint(); \
-break
-
 #if !defined(BUILD_DEBUG) && !defined(BUILD_DEVELOPER) && !defined(BUILD_RELEASE)
 #if defined(_DEBUG) || defined(DEBUG)
 #define BUILD_DEBUG
@@ -152,16 +146,22 @@ break
 #endif
 
 #if !defined(ASSERTION_HANDLED)
-#define AssertHandle(file, line, proc) TriggerBreakpoint()
+#define AssertHandle(reason, file, line, proc) TriggerBreakpoint()
 #else
-void AssertHandle(const char *file, int line, const char *proc);
+void AssertHandle(const char *reason, const char *file, int line, const char *proc);
 #endif
 
-#if defined(BUILD_DEBUG)
+#if !defined(DEPRECATION_HANDLED)
+#define DeprecateHandle(file, line, proc) TriggerBreakpoint()
+#else
+void DeprecateHandle(const char *file, int line, const char *proc);
+#endif
+
+#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define DebugTriggerbreakpoint TriggerBreakpoint
 #define Assert(x)                                                  \
 do {                                                           \
-if (!(x)) AssertHandle(__FILE__, __LINE__, __PROCEDURE__); \
+if (!(x)) AssertHandle("Assert Failed", __FILE__, __LINE__, __PROCEDURE__); \
 } while (0)
 #else
 #define DebugTriggerbreakpoint()
@@ -169,6 +169,24 @@ if (!(x)) AssertHandle(__FILE__, __LINE__, __PROCEDURE__); \
 do {          \
 0;        \
 } while (0)
+#endif
+
+#define Deprecated()	DeprecateHandle(__FILE__, __LINE__, __PROCEDURE__)
+
+#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
+#define Unimplemented() AssertHandle("Unimplemented procedure", __FILE__, __LINE__, __PROCEDURE__);
+#define Unreachable()   AssertHandle("Unreachable code path", __FILE__, __LINE__, __PROCEDURE__);
+#define NoDefaultCase()      \
+default:                 \
+AssertHandle("No default case", __FILE__, __LINE__, __PROCEDURE__); \
+break
+#else
+#define Unimplemented() TriggerBreakpoint();
+#define Unreachable()   TriggerBreakpoint();
+#define NoDefaultCase()      \
+default:                 \
+TriggerBreakpoint(); \
+break
 #endif
 
 //
@@ -280,13 +298,13 @@ extern "C" {
 		void *Data;
 	} Log_Agent;
 
-	typedef struct Scratchpad {
+	typedef struct Thread_Scratchpad {
 		Memory_Arena Arena[2];
-	} Scratchpad;
+	} Thread_Scratchpad;
 
 	typedef struct Thread_Context {
 		Memory_Allocator      Allocator;
-		Scratchpad			  Scratchpad;
+		Thread_Scratchpad	  Scratchpad;
 		Log_Agent			  LogAgent;
 		Fatal_Error_Procedure FatalError;
 	} Thread_Context;
@@ -323,9 +341,9 @@ extern "C" {
 	//
 
 	void *VirtualMemoryAllocate(void *ptr, Ptrsize size);
-	void *VirtualMemoryCommit(void *ptr, Ptrsize size);
+	bool VirtualMemoryCommit(void *ptr, Ptrsize size);
 	bool VirtualMemoryDecommit(void *ptr, Ptrsize size);
-	bool VirtualMemoryFree(void *ptr);
+	bool VirtualMemoryFree(void *ptr, Ptrsize size);
 
 #if defined(__cplusplus)
 }

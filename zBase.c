@@ -25,7 +25,7 @@ extern "C" {
 	}
 
 	void MemoryArenaDestroy(Memory_Arena *arena) {
-		VirtualMemoryFree(arena->Memory);
+		VirtualMemoryFree(arena->Memory, arena->Reserved);
 	}
 
 	void MemoryArenaReset(Memory_Arena *arena) {
@@ -209,16 +209,39 @@ extern "C" {
 		return VirtualAlloc(ptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	}
 
-	void *VirtualMemoryCommit(void *ptr, Ptrsize size) {
-		return VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE);
+	bool VirtualMemoryCommit(void *ptr, Ptrsize size) {
+		return VirtualAlloc(ptr, size, MEM_COMMIT, PAGE_READWRITE) != NULL;
 	}
 
 	bool VirtualMemoryDecommit(void *ptr, Ptrsize size) {
 		return VirtualFree(ptr, size, MEM_DECOMMIT);
 	}
 
-	bool VirtualMemoryFree(void *ptr) {
+	bool VirtualMemoryFree(void *ptr, Ptrsize size) {
 		return VirtualFree(ptr, 0, MEM_RELEASE);
+	}
+
+#endif
+
+#if OS_LINUX == 1
+#include <sys/mman.h>
+
+	void *VirtualMemoryAllocate(void *ptr, Ptrsize size) {
+		void *result = mmap(ptr, size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+		if (result == MAP_FAILED) return NULL;
+		return result;
+	}
+
+	bool VirtualMemoryCommit(void *ptr, Ptrsize size) {
+		return mprotect(ptr, size, PROT_READ | PROT_WRITE) == 0;
+	}
+
+	bool VirtualMemoryDecommit(void *ptr, Ptrsize size) {
+		return mprotect(ptr, size, PROT_NONE) == 0;
+	}
+
+	bool VirtualMemoryFree(void *ptr, Ptrsize size) {
+		return munmap(ptr, size) == 0;
 	}
 
 #endif

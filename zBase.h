@@ -37,33 +37,33 @@
 #if defined(__ANDROID__) || defined(__ANDROID_API__)
 #define OS_ANDROID 1
 #elif defined(__gnu_linux__) || defined(__linux__) || defined(linux) || defined(__linux)
-#define OS_LINUX 1
+#define PLATFORM_OS_LINUX 1
 #elif defined(macintosh) || defined(Macintosh)
-#define OS_MAC 1
+#define PLATFORM_OS_MAC 1
 #elif defined(__APPLE__) && defined(__MACH__)
-#defined OS_MAC 1
+#defined PLATFORM_OS_MAC 1
 #elif defined(__APPLE__)
-#define OS_IOS 1
+#define PLATFORM_OS_IOS 1
 #elif defined(_WIN64) || defined(_WIN32)
-#define OS_WINDOWS 1
+#define PLATFORM_OS_WINDOWS 1
 #else
 #error Missing Operating System Detection
 #endif
 
-#if !defined(OS_ANDRIOD)
-#define OS_ANDRIOD 0
+#if !defined(PLATFORM_OS_ANDRIOD)
+#define PLATFORM_OS_ANDRIOD 0
 #endif
-#if !defined(OS_LINUX)
-#define OS_LINUX 0
+#if !defined(PLATFORM_OS_LINUX)
+#define PLATFORM_OS_LINUX 0
 #endif
-#if !defined(OS_MAC)
-#define OS_MAC 0
+#if !defined(PLATFORM_OS_MAC)
+#define PLATFORM_OS_MAC 0
 #endif
-#if !defined(OS_IOS)
-#define OS_IOS 0
+#if !defined(PLATFORM_OS_IOS)
+#define PLATFORM_OS_IOS 0
 #endif
-#if !defined(OS_WINDOWS)
-#define OS_WINDOWS 0
+#if !defined(PLATFORM_OS_WINDOWS)
+#define PLATFORM_OS_WINDOWS 0
 #endif
 
 #if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || defined(_M_X64)
@@ -133,6 +133,12 @@
 #define TriggerBreakpoint() raise(SIGTRAP)
 #else
 #define TriggerBreakpoint() ((int *)0) = 0
+#endif
+
+#if defined(COMPILER_GCC)
+#define INLINE_PROCEDURE static inline
+#else
+#define INLINE_PROCEDURE inline
 #endif
 
 #if !defined(BUILD_DEBUG) && !defined(BUILD_DEVELOPER) && !defined(BUILD_RELEASE)
@@ -253,6 +259,7 @@ extern "C" {
 	Memory_Arena MemoryArenaCreate(Ptrsize max_size);
 	void MemoryArenaDestroy(Memory_Arena *arena);
 	void MemoryArenaReset(Memory_Arena *arena);
+	Ptrsize MemoryArenaSizeLeft(Memory_Arena *arena);
 
 	void *PushSize(Memory_Arena *arena, Ptrsize size);
 	void *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment);
@@ -283,6 +290,7 @@ extern "C" {
 	} Memory_Allocator;
 
 	Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);
+	Memory_Allocator NullMemoryAllocator();
 
 	typedef enum Log_Kind {
 		Log_Kind_Info,
@@ -315,7 +323,16 @@ extern "C" {
 	//
 	//
 
+	typedef struct Push_Allocator {
+		Memory_Allocator Pushed;
+	} Push_Allocator;
+
+	Push_Allocator PushThreadAllocator(Memory_Allocator to_push);
+	void PopThreadAllocator(Push_Allocator *pushed);
+
 	Memory_Arena *ThreadScratchpad();
+	Memory_Arena *ThreadScratchpadI(Uint32 i);
+	Memory_Arena *ThreadUnusedScratchpad();
 	void ResetThreadScratchpad();
 	Memory_Allocator ThreadScratchpadAllocator();
 
@@ -368,8 +385,9 @@ typedef struct String {
 	}
 #endif
 } String;
-#define StringLiteral(lit) (String) { lit, (Int64)(sizeof(lit) - 1) }
-
+#define StringLiteral(lit) (const String) { (Int64)(sizeof(lit) - 1), lit }
+#define StringLiteralExpand(lit) { (Int64)(sizeof(lit) - 1), lit }
+#define StringMake(ch, len) (const String) { (Int64)(len), (Uint8 *)ch }
 
 #if defined(__cplusplus)
 
@@ -390,16 +408,30 @@ struct Exit_Scope_Help {
 };
 #define Defer const auto &_zConcat(defer__, __LINE__) = Exit_Scope_Help() + [&]()
 
-inline void *MemoryAllocate(Ptrsize size, Memory_Allocator &allocator = ThreadContext.Allocator) {
-	allocator.Allocate(size, allocator.Context);
+INLINE_PROCEDURE void *MemoryAllocate(Ptrsize size, Memory_Allocator *allocator = &ThreadContext.Allocator) {
+	return allocator->Allocate(size, allocator->Context);
 }
 
-inline void *MemoryReallocate(Ptrsize old_size, Ptrsize new_size, void *ptr, Memory_Allocator &allocator = ThreadContext.Allocator) {
-	allocator.Reallocate(ptr, old_size, new_size, allocator.Context);
+INLINE_PROCEDURE void *MemoryReallocate(Ptrsize old_size, Ptrsize new_size, void *ptr, Memory_Allocator *allocator = &ThreadContext.Allocator) {
+	return allocator->Reallocate(ptr, old_size, new_size, allocator->Context);
 }
 
-inline void MemoryFree(void *ptr, Memory_Allocator &allocator = ThreadContext.Allocator) {
-	allocator.Free(ptr, allocator.Context);
+INLINE_PROCEDURE void MemoryFree(void *ptr, Memory_Allocator *allocator = &ThreadContext.Allocator) {
+	allocator->Free(ptr, allocator->Context);
+}
+
+#else
+
+INLINE_PROCEDURE void *MemoryAllocate(Ptrsize size, Memory_Allocator *allocator) {
+	return allocator->Allocate(size, allocator->Context);
+}
+
+INLINE_PROCEDURE void *MemoryReallocate(Ptrsize old_size, Ptrsize new_size, void *ptr, Memory_Allocator *allocator) {
+	return allocator->Reallocate(ptr, old_size, new_size, allocator->Context);
+}
+
+INLINE_PROCEDURE void MemoryFree(void *ptr, Memory_Allocator *allocator) {
+	allocator->Free(ptr, allocator->Context);
 }
 
 #endif

@@ -32,6 +32,10 @@ extern "C" {
 		arena->CurrentPos = 0;
 	}
 
+	Ptrsize MemoryArenaSizeLeft(Memory_Arena *arena) {
+		return arena->Reserved - arena->CurrentPos;
+	}
+
 	void *PushSize(Memory_Arena *arena, Ptrsize size) {
 		void *ptr = 0;
 		if (arena->CurrentPos + size <= arena->Reserved) {
@@ -111,7 +115,40 @@ extern "C" {
 		return allocator;
 	}
 
+	static void *NullMemoryAllocate(Ptrsize size, void *ptr) { return NULL; }
+	static void *NullMemoryReallocate(void *ptr, Ptrsize prev_size, Ptrsize size, void *ctx) { return NULL; }
+	static void NullMemoryFree(void *ptr, void *context) {}
+
+	Memory_Allocator NullMemoryAllocator() {
+		Memory_Allocator allocator;
+		allocator.Allocate = NullMemoryAllocate;
+		allocator.Reallocate = NullMemoryReallocate;
+		allocator.Free = NullMemoryFree;
+		allocator.Context = NULL;
+		return allocator;
+	}
+
+	Push_Allocator PushThreadAllocator(Memory_Allocator to_push) {
+		Push_Allocator pushed;
+		pushed.Pushed = ThreadContext.Allocator;
+		ThreadContext.Allocator = to_push;
+		return pushed;
+	}
+
+	void PopThreadAllocator(Push_Allocator *pushed) {
+		ThreadContext.Allocator = pushed->Pushed;
+	}
+
 	Memory_Arena *ThreadScratchpad() {
+		return &ThreadContext.Scratchpad.Arena[0];
+	}
+	
+	Memory_Arena *ThreadScratchpadI(Uint32 i) {
+		Assert(i < ArrayCount(ThreadContext.Scratchpad.Arena));
+		return &ThreadContext.Scratchpad.Arena[i];
+	}
+
+	Memory_Arena *ThreadUnusedScratchpad() {
 		for (uint32_t index = 0; ArrayCount(ThreadContext.Scratchpad.Arena); ++index) {
 			if (&ThreadContext.Scratchpad.Arena[index] != ThreadContext.Allocator.Context) {
 				return &ThreadContext.Scratchpad.Arena[index];
@@ -184,24 +221,24 @@ extern "C" {
 	}
 
 	const char *GetPlatformName() {
-#if OS_ANDRIOD == 1
+#if PLATFORM_OS_ANDRIOD == 1
 		return "Andriod";
 #endif
-#if OS_LINUX == 1
+#if PLATFORM_OS_LINUX == 1
 		return "Linux";
 #endif
-#if OS_MAC == 1
+#if PLATFORM_OS_MAC == 1
 		return "Mac";
 #endif
-#if OS_IOS == 1
+#if PLATFORM_OS_IOS == 1
 		return "iOS";
 #endif
-#if OS_WINDOWS == 1
+#if PLATFORM_OS_WINDOWS == 1
 		return "Windows";
 #endif
 	}
 
-#if OS_WINDOWS == 1
+#if PLATFORM_OS_WINDOWS == 1
 #define MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS 0
 #include <Windows.h>
 
@@ -223,7 +260,7 @@ extern "C" {
 
 #endif
 
-#if OS_LINUX == 1
+#if PLATFORM_OS_LINUX == 1
 #include <sys/mman.h>
 
 	void *VirtualMemoryAllocate(void *ptr, Ptrsize size) {

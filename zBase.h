@@ -158,9 +158,9 @@ void AssertHandle(const char *reason, const char *file, int line, const char *pr
 #endif
 
 #if !defined(DEPRECATION_HANDLED)
-#define DeprecateHandle(file, line, proc) TriggerBreakpoint()
+#define DeprecateHandle(reason, file, line, proc) TriggerBreakpoint()
 #else
-void DeprecateHandle(const char *file, int line, const char *proc);
+INLINE_PROCEDURE void DeprecateHandle(const char *reason, const char *file, int line, const char *proc);
 #endif
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
@@ -177,7 +177,8 @@ do {          \
 } while (0)
 #endif
 
-#define Deprecated()	DeprecateHandle(__FILE__, __LINE__, __PROCEDURE__)
+#define UnusedVariable(...)
+#define Deprecated(reason)	DeprecateHandle(reason, __FILE__, __LINE__, __PROCEDURE__)
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define Unimplemented() AssertHandle("Unimplemented procedure", __FILE__, __LINE__, __PROCEDURE__);

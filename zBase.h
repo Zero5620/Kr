@@ -157,12 +157,6 @@
 void AssertHandle(const char *reason, const char *file, int line, const char *proc);
 #endif
 
-#if !defined(DEPRECATION_HANDLED)
-#define DeprecateHandle(reason, file, line, proc) TriggerBreakpoint()
-#else
-INLINE_PROCEDURE void DeprecateHandle(const char *reason, const char *file, int line, const char *proc);
-#endif
-
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define DebugTriggerbreakpoint TriggerBreakpoint
 #define Assert(x)                                                  \
@@ -176,9 +170,6 @@ do {          \
 0;        \
 } while (0)
 #endif
-
-#define UnusedVariable(...)
-#define Deprecated(reason)	DeprecateHandle(reason, __FILE__, __LINE__, __PROCEDURE__)
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define Unimplemented() AssertHandle("Unimplemented procedure", __FILE__, __LINE__, __PROCEDURE__);
@@ -387,7 +378,7 @@ typedef struct String {
 #endif
 } String;
 #define StringLiteral(lit) (const String) { (Int64)(sizeof(lit) - 1), lit }
-#define StringLiteralExpand(lit) { (Int64)(sizeof(lit) - 1), lit }
+#define StringExpand(lit) { (Int64)(sizeof(lit) - 1), lit }
 #define StringMake(ch, len) (const String) { (Int64)(len), (Uint8 *)ch }
 
 #if defined(__cplusplus)

@@ -2362,3 +2362,396 @@ bool PointInsideConvexPolygon(Vec2 p, Vec2 *v, uint64_t n)
     // the directed edge from v[low] to v[high]
     return IsTriangleClockwise(v[low], v[high], p);
 }
+
+bool IntersectRectRect(Rect a, Rect b)
+{
+    if (a.Max.x < b.Min.x || a.Min.x > b.Max.x)
+        return false;
+    if (a.Max.y < b.Min.y || a.Min.y > b.Max.y)
+        return false;
+    return true;
+}
+
+bool IntersectCircleCircle(Circle a, Circle b)
+{
+    auto d = a.Center - b.Center;
+    float dist2 = DotProduct(d, d);
+    float radius_sum = a.Radius + b.Radius;
+    return dist2 <= radius_sum * radius_sum;
+}
+
+bool IntersectQuadQuad(Vec2 a_vertices[4], Vec2 a_normals[4], Vec2 b_vertices[4], Vec2 b_normals[4])
+{
+    for (uint32_t quad_index = 0; quad_index < 2; ++quad_index)
+    {
+        for (uint32_t edge_index = 0; edge_index < 4; ++edge_index)
+        {
+            float min_proj_a = INFINITY, max_proj_a = -INFINITY;
+            float min_proj_b = INFINITY, max_proj_b = -INFINITY;
+
+            float dot;
+            Vec2 normal = a_normals[edge_index];
+
+            for (uint32_t p_index = 0; p_index < 4; ++p_index)
+            {
+                dot = DotProduct(normal, a_vertices[p_index]);
+                min_proj_a = Minimum(min_proj_a, dot);
+                max_proj_a = Maximum(max_proj_a, dot);
+            }
+
+            for (uint32_t p_index = 0; p_index < 4; ++p_index)
+            {
+                dot = DotProduct(normal, b_vertices[p_index]);
+                min_proj_b = Minimum(min_proj_b, dot);
+                max_proj_b = Maximum(max_proj_b, dot);
+            }
+
+            if (!(max_proj_b >= min_proj_a && max_proj_a >= min_proj_b))
+                return false;
+        }
+
+        Swap(&a_vertices, &b_vertices, Vec2 *);
+        Swap(&a_normals, &b_normals, Vec2 *);
+    }
+
+    return true;
+}
+
+bool IntersectCircleCapsule(Circle circle, Capsule capsule)
+{
+    float dst2 = PointToSegmentLengthSq(circle.Center, capsule.Center[0], capsule.Center[1]);
+    float radius = circle.Radius + capsule.Radius;
+    return dst2 <= radius * radius;
+}
+
+bool ItersectSegmentCircle(Vec2 a, Vec2 b, Circle c)
+{
+    float dist2 = PointToSegmentLengthSq(c.Center, a, b);
+    return dist2 <= c.Radius * c.Radius;
+}
+
+bool ItersectSegmentSegment(const Capsule &capsule1, const Capsule &capsule2)
+{
+    float s, t;
+    Vec2 c1, c2;
+    float dist2 = NearestPointBetween2Segments(capsule1.Center[0], capsule1.Center[1], capsule2.Center[0], capsule2.Center[1], &s, &t, &c1, &c2);
+    float radius = capsule1.Radius + capsule2.Radius;
+    return dist2 <= radius * radius;
+}
+
+bool ItersectRayCircle(Vec2 ray_origin, Vec2 ray_dir, Circle circle)
+{
+    Vec2 m = ray_origin - circle.Center;
+    float c = DotProduct(m, m) - circle.Radius * circle.Radius;
+    if (c <= 0.0f)
+        return true;
+
+    float b = DotProduct(m, ray_dir);
+    // Early exit if ray origin outside sphere and ray pointing away from sphere
+    if (b > 0.0f)
+        return false;
+
+    float disc = b * b - c;
+    if (disc < 0.0f)
+        return false;
+    return true;
+}
+
+bool IntersectSegmentRect(Vec2 p0, Vec2 p1, Rect rect)
+{
+    Vec2 c = (rect.Min + rect.Max) * 0.5f;
+    Vec2 e = rect.Max - c;
+    Vec2 m = (p0 + p1) * 0.5f;
+    Vec2 d = p1 - m;
+
+    m = m - c;
+
+    float adx = MathAbsolute(d.x);
+    if (MathAbsolute(m.x) > e.x + adx)
+        return false;
+    float ady = MathAbsolute(d.y);
+    if (MathAbsolute(m.y) > e.y + ady)
+        return false;
+
+    // Add in an epsilon term to counteract arithmetic errors when segment is
+    // (near) parallel to a coordinate axis (see text for detail)
+    adx += FLT_EPSILON;
+    ady += FLT_EPSILON;
+    if (MathAbsolute(m.x * d.y - m.y * d.x) > e.x * ady + e.y * adx)
+        return false;
+
+    return true;
+}
+
+bool IntersectSegmentSegment(Vec2 a, Vec2 b, Vec2 c, Vec2 d, float *t, Vec2 *p)
+{
+    // Sign of areas correspond to which side of ab points c and d are
+    float a1 = TriangleAreaSignedTwiced(a, b, d);
+    float a2 = TriangleAreaSignedTwiced(a, b, c);
+
+    // If c and d are on different sides of ab, areas have different signs
+    if (a1 != 0.0f && a2 != 0.0f && a1 * a2 < 0.0f)
+    {
+        // Compute signs for a and b with respect to segment cd
+        float a3 = TriangleAreaSignedTwiced(c, d, a);
+        float a4 = a3 + a2 - a1;
+        // Points a and b on different sides of cd if areas have different signs
+        if (a3 != 0.0f && a4 != 0.0f && a3 * a4 < 0.0f)
+        {
+            *t = a3 / (a3 - a4);
+            *p = a + *t * (b - a);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool IntersectCircleTriangle(Circle circle, Vec2 a, Vec2 b, Vec2 c, Vec2 *p)
+{
+    *p = NearestPointBetweenPointTriangle(circle.Center, a, b, c);
+    Vec2 v = *p - circle.Center;
+    return DotProduct(v, v) <= circle.Radius * circle.Radius;
+}
+
+bool IntersectSegmentLine(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *t, Vec2 *p)
+{
+    float dx1 = p1.x - q1.x;
+    float dy1 = p1.y - q1.y;
+    float dx2 = p2.x - q2.x;
+    float dy2 = p2.y - q2.y;
+
+    float d = dx1 * dy2 - dy1 * dx2;
+
+    if (d)
+    {
+        float n2 = -dx1 * (p1.y - p2.y) + dy1 * (p1.x - p2.x);
+        float u = n2 / d;
+
+        float n = (p1.x - p2.x) * dy2 - (p1.y - p2.y) * dx2;
+        *t = n / d;
+
+        if ((*t >= 0.0f && *t <= 1.0f) && u >= 0.0f)
+        {
+            p->x = p1.x - (*t * dx1);
+            p->y = p1.y - (*t * dy1);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool IntersectSegmentRay(Vec2 p1, Vec2 q1, Vec2 ray_origin, Vec2 ray_dir, float *t, Vec2 *p)
+{
+    Vec2 p2 = ray_origin;
+    Vec2 q2 = ray_origin + ray_dir;
+    return IntersectSegmentLine(p1, q1, p2, q2, t, p);
+}
+
+bool IntersectLineLine(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *t, float *u, Vec2 *p)
+{
+    float dx1 = p1.x - q1.x;
+    float dy1 = p1.y - q1.y;
+    float dx2 = p2.x - q2.x;
+    float dy2 = p2.y - q2.y;
+
+    float d = dx1 * dy2 - dy1 * dx2;
+
+    if (d)
+    {
+        float n2 = -dx1 * (p1.y - p2.y) + dy1 * (p1.x - p2.x);
+        *u = n2 / d;
+
+        float n = (p1.x - p2.x) * dy2 - (p1.y - p2.y) * dx2;
+        *t = n / d;
+
+        p->x = p2.x - (*u * dx2);
+        p->y = p2.y - (*u * dy2);
+        return true;
+    }
+
+    return false;
+}
+
+bool IntersectLineRay(Vec2 p1, Vec2 q1, Vec2 b_origin, Vec2 b_dir, float *t, float *u, Vec2 *p)
+{
+    Vec2 p2 = b_origin;
+    Vec2 q2 = b_origin + b_dir;
+    return IntersectLineLine(p1, q1, p2, q2, t, u, p);
+}
+
+bool IntersectRayRay(Vec2 a_origin, Vec2 a_dir, Vec2 b_origin, Vec2 b_dir, float *t, float *u, Vec2 *p)
+{
+    Vec2 p1 = a_origin;
+    Vec2 q1 = a_origin + a_dir;
+    Vec2 p2 = b_origin;
+    Vec2 q2 = b_origin + b_dir;
+    return IntersectLineLine(p1, q1, p2, q2, t, u, p);
+}
+
+bool IntersectSegmentSegment(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *t, float *u, Vec2 *p)
+{
+    float dx1 = p1.x - q1.x;
+    float dy1 = p1.y - q1.y;
+    float dx2 = p2.x - q2.x;
+    float dy2 = p2.y - q2.y;
+
+    float d = dx1 * dy2 - dy1 * dx2;
+
+    if (d)
+    {
+        float n2 = -dx1 * (p1.y - p2.y) + dy1 * (p1.x - p2.x);
+        *u = n2 / d;
+
+        if (*u >= 0.0f && *u <= 1.0f)
+        {
+            float n = (p1.x - p2.x) * dy2 - (p1.y - p2.y) * dx2;
+            *t = n / d;
+            if (*t >= 0.0f && *t <= 1.0f)
+            {
+                p->x = p2.x - (*u * dx2);
+                p->y = p2.y - (*u * dy2);
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool IntersectCircleRay(Circle circle, Vec2 ray_origin, Vec2 ray_dir, float *t, Vec2 *p)
+{
+    Vec2 m = ray_origin - circle.Center;
+
+    float b = DotProduct(m, ray_dir);
+    float c = DotProduct(m, m) - circle.Radius * circle.Radius;
+
+    // Exit if ray’s origin outside circle (c > 0) and ray pointing away from circle (b > 0)
+    if (c > 0.0f && b > 0.0f)
+        return false;
+
+    float discr = b * b - c;
+    if (discr < 0.0f)
+        return false;
+
+    // Ray found to intersect circle, compute smallest t value of intersection
+    *t = -b - MathSquareRoot(discr);
+
+    // If t is negative, ray started inside sphere so clamp t to zero
+    if (*t < 0.0f)
+        *t = 0.0f;
+    *p = ray_origin + *t * ray_dir;
+    return true;
+}
+
+bool IntersectCircleSegment(Circle circle, Vec2 p, Vec2 q, float *t)
+{
+    Vec2 m = p - circle.Center;
+    Vec2 d = q - p;
+
+    float b = DotProduct(m, d);
+    float c = DotProduct(m, m) - circle.Radius * circle.Radius;
+
+    // Exit if ray’s origin outside circle (c > 0) and ray pointing away from circle (b > 0)
+    if (c > 0.0f && b > 0.0f)
+        return false;
+
+    float a = DotProduct(d, d);
+
+    float discr = b * b - a * c;
+    if (discr < 0.0f)
+        return false;
+
+    // Ray found to intersect circle, compute smallest t value of intersection
+    *t = (-b - MathSquareRoot(discr)) / a;
+    if (*t < 0.0f || *t > 1.0f)
+        return false;
+
+    return true;
+}
+
+bool IntersectRayRect(Vec2 ray_origin, Vec2 ray_dir, Rect rect, float *tmin, Vec2 *q)
+{
+    *tmin = 0.0f;
+    float tmax = FLT_MAX;
+
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        if (MathAbsolute(ray_dir.m[i]) < FLT_EPSILON)
+        {
+            // Ray is parallel to slab. No hit if origin not within slab
+            if (ray_origin.m[i] < rect.Min.m[i] || ray_origin.m[i] > rect.Max.m[i])
+                return false;
+        }
+        else
+        {
+            // Compute intersection t value of ray with near and far plane of slab
+            float ood = 1.0f / ray_dir.m[i];
+            float t1 = (rect.Min.m[i] - ray_origin.m[i]) * ood;
+            float t2 = (rect.Max.m[i] - ray_origin.m[i]) * ood;
+            // Make t1 be intersection with near plane, t2 with far plane
+            if (t1 > t2)
+            {
+                auto temp = t1;
+                t1 = t2;
+                t2 = temp;
+            }
+            // Compute the intersection of slab intersection intervals
+            if (t1 > *tmin)
+                *tmin = t1;
+            if (t2 > tmax)
+                tmax = t2;
+            // Exit with no collision as soon as slab intersection becomes empty
+            if (*tmin > tmax)
+                return false;
+        }
+    }
+
+    *q = ray_origin + ray_dir * *tmin;
+    return true;
+}
+
+bool IntersectRectSegment(Vec2 a, Vec2 b, Rect rect, float *tmin, Vec2 *q)
+{
+    Vec2 ray_origin = a;
+    Vec2 ray_dir = b - a;
+
+    *tmin = 0.0f;
+    float tmax = 1.0f;
+
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        if (MathAbsolute(ray_dir.m[i]) < FLT_EPSILON)
+        {
+            // Ray is parallel to slab. No hit if origin not within slab
+            if (ray_origin.m[i] < rect.Min.m[i] || ray_origin.m[i] > rect.Max.m[i])
+                return false;
+        }
+        else
+        {
+            // Compute intersection t value of ray with near and far plane of slab
+            float ood = 1.0f / ray_dir.m[i];
+            float t1 = (rect.Min.m[i] - ray_origin.m[i]) * ood;
+            float t2 = (rect.Max.m[i] - ray_origin.m[i]) * ood;
+            // Make t1 be intersection with near plane, t2 with far plane
+            if (t1 > t2)
+            {
+                auto temp = t1;
+                t1 = t2;
+                t2 = temp;
+            }
+            // Compute the intersection of slab intersection intervals
+            if (t1 > *tmin)
+                *tmin = t1;
+            if (t2 > tmax)
+                tmax = t2;
+            // Exit with no collision as soon as slab intersection becomes empty
+            if (*tmin > tmax)
+                return false;
+        }
+    }
+
+    *q = ray_origin + ray_dir * *tmin;
+    return true;
+}

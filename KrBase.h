@@ -66,7 +66,7 @@
 #define PLATFORM_OS_WINDOWS 0
 #endif
 
-#if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) ||         \
+#if defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || defined(_M_AMD64) || \
     defined(_M_X64)
 #define ARCH_X64 1
 #elif defined(i386) || defined(__i386) || defined(__i386__) || defined(_M_IX86) || defined(_X86_)
@@ -126,7 +126,7 @@
 
 #if defined(_MSC_VER)
 #define TriggerBreakpoint() __debugbreak()
-#elif ((!defined(__NACL__)) &&                                                                                         \
+#elif ((!defined(__NACL__)) && \
        ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
 #define TriggerBreakpoint() __asm__ __volatile__("int $3\n\t")
 #elif defined(__386__) && defined(__WATCOMC__)
@@ -156,39 +156,39 @@
 #if !defined(ASSERTION_HANDLED)
 #define AssertHandle(reason, file, line, proc) TriggerBreakpoint()
 #else
-void                   AssertHandle(const char *reason, const char *file, int line, const char *proc);
+void AssertHandle(const char *reason, const char *file, int line, const char *proc);
 #endif
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define DebugTriggerbreakpoint TriggerBreakpoint
-#define Assert(x)                                                                                                      \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        if (!(x))                                                                                                      \
-            AssertHandle("Assert Failed", __FILE__, __LINE__, __PROCEDURE__);                                          \
+#define Assert(x)                                                             \
+    do                                                                        \
+    {                                                                         \
+        if (!(x))                                                             \
+            AssertHandle("Assert Failed", __FILE__, __LINE__, __PROCEDURE__); \
     } while (0)
 #else
 #define DebugTriggerbreakpoint()
-#define Assert(x)                                                                                                      \
-    do                                                                                                                 \
-    {                                                                                                                  \
-        0;                                                                                                             \
+#define Assert(x) \
+    do            \
+    {             \
+        0;        \
     } while (0)
 #endif
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define Unimplemented() AssertHandle("Unimplemented procedure", __FILE__, __LINE__, __PROCEDURE__);
 #define Unreachable() AssertHandle("Unreachable code path", __FILE__, __LINE__, __PROCEDURE__);
-#define NoDefaultCase()                                                                                                \
-    default:                                                                                                           \
-        AssertHandle("No default case", __FILE__, __LINE__, __PROCEDURE__);                                            \
+#define NoDefaultCase()                                                     \
+    default:                                                                \
+        AssertHandle("No default case", __FILE__, __LINE__, __PROCEDURE__); \
         break
 #else
 #define Unimplemented() TriggerBreakpoint();
 #define Unreachable() TriggerBreakpoint();
-#define NoDefaultCase()                                                                                                \
-    default:                                                                                                           \
-        TriggerBreakpoint();                                                                                           \
+#define NoDefaultCase()      \
+    default:                 \
+        TriggerBreakpoint(); \
         break
 #endif
 
@@ -196,19 +196,19 @@ void                   AssertHandle(const char *reason, const char *file, int li
 //
 //
 
-typedef uint8_t  Uint8;
+typedef uint8_t Uint8;
 typedef uint16_t Uint16;
 typedef uint32_t Uint32;
 typedef uint64_t Uint64;
-typedef int8_t   Int8;
-typedef int16_t  Int16;
-typedef int32_t  Int32;
-typedef int64_t  Int64;
-typedef float    Real32;
-typedef double   Real64;
-typedef size_t   Ptrsize;
-typedef int32_t  Int;
-typedef float    Real;
+typedef int8_t Int8;
+typedef int16_t Int16;
+typedef int32_t Int32;
+typedef int64_t Int64;
+typedef float Real32;
+typedef double Real64;
+typedef size_t Ptrsize;
+typedef int32_t Int;
+typedef float Real;
 
 //
 //
@@ -227,7 +227,7 @@ typedef float    Real;
 #define AlignPower2Down(x, p) ((x) & ~((p)-1))
 
 #define ByteSwap16(a) ((((a)&0x00FF) << 8) | (((a)&0xFF00) >> 8))
-#define ByteSwap32(a)                                                                                                  \
+#define ByteSwap32(a) \
     ((((a)&0x000000FF) << 24) | (((a)&0x0000FF00) << 8) | (((a)&0x00FF0000) >> 8) | (((a)&0xFF000000) >> 24))
 #define ByteSwap64(a)                                                                                                  \
     ((((a)&0x00000000000000FFULL) << 56) | (((a)&0x000000000000FF00ULL) << 40) | (((a)&0x0000000000FF0000ULL) << 24) | \
@@ -244,7 +244,7 @@ extern "C"
 {
 #endif
 
-    Uint8  *AlignPointer(Uint8 *location, Ptrsize alignment);
+    Uint8 *AlignPointer(Uint8 *location, Ptrsize alignment);
     Ptrsize AlignSize(Ptrsize location, Ptrsize alignment);
 
     typedef struct Memory_Arena
@@ -252,17 +252,17 @@ extern "C"
         Ptrsize CurrentPos;
         Ptrsize CommitPos;
         Ptrsize Reserved;
-        Uint8  *Memory;
+        Uint8 *Memory;
     } Memory_Arena;
 
     Memory_Arena MemoryArenaCreate(Ptrsize max_size);
-    void         MemoryArenaDestroy(Memory_Arena *arena);
-    void         MemoryArenaReset(Memory_Arena *arena);
-    Ptrsize      MemoryArenaSizeLeft(Memory_Arena *arena);
+    void MemoryArenaDestroy(Memory_Arena *arena);
+    void MemoryArenaReset(Memory_Arena *arena);
+    Ptrsize MemoryArenaSizeLeft(Memory_Arena *arena);
 
-    void        *PushSize(Memory_Arena *arena, Ptrsize size);
-    void        *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment);
-    void         SetAllocationPosition(Memory_Arena *arena, Ptrsize pos);
+    void *PushSize(Memory_Arena *arena, Ptrsize size);
+    void *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment);
+    void SetAllocationPosition(Memory_Arena *arena, Ptrsize pos);
 
 #define PushType(arena, type) (type *)PushSize(arena, sizeof(type))
 #define PushArray(arena, type, count) (type *)PushSize(arena, sizeof(type) * count)
@@ -271,12 +271,12 @@ extern "C"
     typedef struct Temporary_Memory
     {
         Memory_Arena *Arena;
-        Ptrsize       Position;
+        Ptrsize Position;
     } Temporary_Memory;
 
     Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena);
-    void             EndTemporaryMemory(Temporary_Memory *temp);
-    void             FreeTemporaryMemory(Temporary_Memory *temp);
+    void EndTemporaryMemory(Temporary_Memory *temp);
+    void FreeTemporaryMemory(Temporary_Memory *temp);
 
     typedef void *(*Memory_Allocate)(Ptrsize size, void *context);
     typedef void *(*Memory_Reallocate)(void *ptr, Ptrsize previous_size, Ptrsize new_size, void *context);
@@ -284,10 +284,10 @@ extern "C"
 
     typedef struct Memory_Allocator
     {
-        Memory_Allocate   Allocate;
+        Memory_Allocate Allocate;
         Memory_Reallocate Reallocate;
-        Memory_Free       Free;
-        void             *Context;
+        Memory_Free Free;
+        void *Context;
     } Memory_Allocator;
 
     Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);
@@ -306,7 +306,7 @@ extern "C"
     typedef struct Log_Agent
     {
         Log_Procedure Procedure;
-        void         *Data;
+        void *Data;
     } Log_Agent;
 
     typedef struct Thread_Scratchpad
@@ -316,9 +316,9 @@ extern "C"
 
     typedef struct Thread_Context
     {
-        Memory_Allocator      Allocator;
-        Thread_Scratchpad     Scratchpad;
-        Log_Agent             LogAgent;
+        Memory_Allocator Allocator;
+        Thread_Scratchpad Scratchpad;
+        Log_Agent LogAgent;
         Fatal_Error_Procedure FatalError;
     } Thread_Context;
 
@@ -333,26 +333,26 @@ extern "C"
         Memory_Allocator Pushed;
     } Push_Allocator;
 
-    Push_Allocator   PushThreadAllocator(Memory_Allocator to_push);
-    void             PopThreadAllocator(Push_Allocator *pushed);
+    Push_Allocator PushThreadAllocator(Memory_Allocator to_push);
+    void PopThreadAllocator(Push_Allocator *pushed);
 
-    Memory_Arena    *ThreadScratchpad();
-    Memory_Arena    *ThreadScratchpadI(Uint32 i);
-    Memory_Arena    *ThreadUnusedScratchpad();
-    void             ResetThreadScratchpad();
+    Memory_Arena *ThreadScratchpad();
+    Memory_Arena *ThreadScratchpadI(Uint32 i);
+    Memory_Arena *ThreadUnusedScratchpad();
+    void ResetThreadScratchpad();
     Memory_Allocator ThreadScratchpadAllocator();
 
-    void             FatalError(const char *msg);
+    void FatalError(const char *msg);
 
-    void             LogInfoV(const char *fmt, va_list list);
-    void             LogWarnV(const char *fmt, va_list list);
-    void             LogErrorV(const char *fmt, va_list list);
-    void             LogInfo(const char *fmt, ...);
-    void             LogWarn(const char *fmt, ...);
-    void             LogError(const char *fmt, ...);
+    void LogInfoV(const char *fmt, va_list list);
+    void LogWarnV(const char *fmt, va_list list);
+    void LogErrorV(const char *fmt, va_list list);
+    void LogInfo(const char *fmt, ...);
+    void LogWarn(const char *fmt, ...);
+    void LogError(const char *fmt, ...);
 
-    void             InitThreadContext(Memory_Allocator allocator, uint32_t scratchpad_size, Log_Agent logger,
-                                       Fatal_Error_Procedure fatal_error);
+    void InitThreadContext(Memory_Allocator allocator, uint32_t scratchpad_size, Log_Agent logger,
+                           Fatal_Error_Procedure fatal_error);
 
     //
     //
@@ -365,9 +365,9 @@ extern "C"
     //
 
     void *VirtualMemoryAllocate(void *ptr, Ptrsize size);
-    bool  VirtualMemoryCommit(void *ptr, Ptrsize size);
-    bool  VirtualMemoryDecommit(void *ptr, Ptrsize size);
-    bool  VirtualMemoryFree(void *ptr, Ptrsize size);
+    bool VirtualMemoryCommit(void *ptr, Ptrsize size);
+    bool VirtualMemoryDecommit(void *ptr, Ptrsize size);
+    bool VirtualMemoryFree(void *ptr, Ptrsize size);
 
 #if defined(__cplusplus)
 }
@@ -375,14 +375,15 @@ extern "C"
 
 typedef struct String
 {
-    Int64  Length;
+    Int64 Length;
     Uint8 *Data;
 
 #if defined(__cplusplus)
     String() : Data(0), Length(0)
     {
     }
-    template <Int64 _Length> constexpr String(const char (&a)[_Length]) : Data((uint8_t *)a), Length(_Length - 1)
+    template <Int64 _Length>
+    constexpr String(const char (&a)[_Length]) : Data((uint8_t *)a), Length(_Length - 1)
     {
     }
     String(const Uint8 *_Data, Int64 _Length) : Data((uint8_t *)_Data), Length(_Length)
@@ -400,22 +401,22 @@ typedef struct String
     }
 #endif
 } String;
-#define StringLiteral(lit)                                                                                             \
-    (const String)                                                                                                     \
-    {                                                                                                                  \
-        (Int64)(sizeof(lit) - 1), lit                                                                                  \
+#define StringLiteral(lit)            \
+    (const String)                    \
+    {                                 \
+        (Int64)(sizeof(lit) - 1), lit \
     }
 #if defined(__cplusplus)
 #define StringMake(ch, len) String((Uint8 *)ch, len)
 #else
-#define StringExpand(lit)                                                                                              \
-    {                                                                                                                  \
-        (Int64)(sizeof(lit) - 1), lit                                                                                  \
+#define StringExpand(lit)             \
+    {                                 \
+        (Int64)(sizeof(lit) - 1), lit \
     }
-#define StringMake(ch, len)                                                                                            \
-    (String)                                                                                                           \
-    {                                                                                                                  \
-        (Int64)(len), (Uint8 *)(ch)                                                                                    \
+#define StringMake(ch, len)         \
+    (String)                        \
+    {                               \
+        (Int64)(len), (Uint8 *)(ch) \
     }
 #endif
 
@@ -424,7 +425,8 @@ typedef struct String
 #define _zConcatInternal(x, y) x##y
 #define _zConcat(x, y) _zConcatInternal(x, y)
 
-template <typename T> struct Exit_Scope
+template <typename T>
+struct Exit_Scope
 {
     T lambda;
     Exit_Scope(T lambda) : lambda(lambda)
@@ -437,12 +439,29 @@ template <typename T> struct Exit_Scope
 };
 struct Exit_Scope_Help
 {
-    template <typename T> Exit_Scope<T> operator+(T t)
+    template <typename T>
+    Exit_Scope<T> operator+(T t)
     {
         return t;
     }
 };
 #define Defer const auto &_zConcat(defer__, __LINE__) = Exit_Scope_Help() + [&]()
+
+template <typename T>
+INLINE_PROCEDURE void SwapGeneric(T *a, T *b)
+{
+    T temp = *a;
+    *a = *b;
+    *b = temp;
+}
+//#define Swap(a, b, type) SwapTemplated<type>(a, b)
+
+#define Swap(a, b, type)                      \
+    {                                         \
+        type _zConcat(temp__, __LINE__) = *a; \
+        *a = *b;                              \
+        *b = _zConcat(temp__, __LINE__);      \
+    }
 
 INLINE_PROCEDURE void *MemoryAllocate(Ptrsize size, Memory_Allocator *allocator = &ThreadContext.Allocator)
 {

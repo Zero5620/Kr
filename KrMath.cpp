@@ -1419,7 +1419,7 @@ bool IsTriangleClockwise(Vec2 a, Vec2 b, Vec2 c)
     return Determinant(b - a, c - a) < 0.0f;
 }
 
-Vec2 RectangleCorner(Rect b, uint32_t n)
+Vec2 RectCorner(Rect b, uint32_t n)
 {
     Vec2 p;
     p.x = ((n & 1) ? b.Max.x : b.Min.x);
@@ -2753,5 +2753,131 @@ bool IntersectRectSegment(Vec2 a, Vec2 b, Rect rect, float *tmin, Vec2 *q)
     }
 
     *q = ray_origin + ray_dir * *tmin;
+    return true;
+}
+
+bool CircleVsCircleDynamic(Circle c0, Circle c1, Vec2 v0, Vec2 v1, float *t)
+{
+    Vec2 s = c1.Center - c0.Center;
+    Vec2 v = v1 - v0; // Relative motion of c1 with respect to stationary c0
+    float r = c1.Radius + c0.Radius;
+    float c = DotProduct(s, s) - r * r;
+
+    if (c < 0.0f)
+    {
+        // Spheres initially overlapping so exit directly
+        *t = 0.0f;
+        return true;
+    }
+
+    float a = DotProduct(v, v);
+    if (a < FLT_EPSILON)
+        return false; // Spheres not moving relative each other
+
+    float b = DotProduct(v, s);
+    if (b >= 0.0f)
+        return false; // Spheres not moving towards each other
+
+    float d = b * b - a * c;
+    if (d < 0.0f)
+        return false; // No real-valued root, spheres do not intersect
+
+    *t = (-b - MathSquareRoot(d)) / a;
+    return true;
+}
+
+bool CircleVsRectDynamic(Circle c, Vec2 d, Rect b, float *t)
+{
+    // Compute the AABB resulting from expanding b by circle radius r
+    Rect e = b;
+    e.Min.x -= c.Radius;
+    e.Min.y -= c.Radius;
+    e.Max.x += c.Radius;
+    e.Max.y += c.Radius;
+
+    // Define line segment [p0, p1] specified by the circle movement
+    Vec2 p0 = c.Center;
+    Vec2 p1 = c.Center + d;
+
+    // Intersect ray against expanded AABB e. Exit with no intersection if ray
+    // misses e, else get intersection pos32 p and time t as result
+    Vec2 p;
+    if (!IntersectRectSegment(p0, p1, e, t, &p))
+    {
+        return false;
+    }
+
+    // Compute which min and max faces of b the intersection pos32 p lies
+    // outside of. Note, u and v cannot have the same bits set and
+    // they must have at least one bit set among them
+    uint32_t u = 0, v = 0;
+    if (p.x < b.Min.x)
+        u |= 1;
+    if (p.x > b.Max.x)
+        v |= 1;
+    if (p.y < b.Min.y)
+        u |= 2;
+    if (p.y > b.Max.y)
+        v |= 2;
+
+    // ‘Or’ all set bits together into a bit mask (note: here u + v == u | v)
+    uint32_t m = u + v;
+
+    // If both 2 bits set (m == 3) then p is in a vertex region
+    if (m == 3)
+    {
+        // Now check [p0, p1] against the circle in the vertex
+        Vec2 vertex = RectCorner(b, v);
+        if (!IntersectCircleSegment(Circle(vertex, c.Radius), p0, p1, t))
+            return false;
+    }
+
+    return true;
+}
+
+bool RectVsRectDynamic(Rect a, Rect b, Vec2 va, Vec2 vb, float *tfirst, float *tlast)
+{
+    // Exit early if 'a' and 'b' initially overlapping
+    if (IntersectRectRect(a, b))
+    {
+        *tfirst = *tlast = 0.0f;
+        return true;
+    }
+
+    // Use relative velocity; effectively treating 'a' as stationary
+    Vec2 v = vb - va;
+
+    // Initialize times of first and last contact
+    *tfirst = 0.0f;
+    *tlast = 1.0f;
+
+    // For each axis, determine times of first and last contact, if any
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        if (v.m[i] < 0.0f)
+        {
+            if (b.Max.m[i] < a.Min.m[i])
+                return false; // Nonintersecting and moving apart
+            if (a.Max.m[i] < b.Min.m[i])
+                *tfirst = Maximum((a.Max.m[i] - b.Min.m[i]) / v.m[i], *tfirst);
+            if (b.Max.m[i] > a.Min.m[i])
+                *tlast = Minimum((a.Min.m[i] - b.Max.m[i]) / v.m[i], *tlast);
+        }
+
+        if (v.m[i] > 0.0f)
+        {
+            if (b.Min.m[i] > a.Max.m[i])
+                return false; // Nonintersecting and moving apart
+            if (b.Max.m[i] < a.Min.m[i])
+                *tfirst = Maximum((a.Min.m[i] - b.Max.m[i]) / v.m[i], *tfirst);
+            if (a.Max.m[i] > b.Min.m[i])
+                *tlast = Minimum((a.Max.m[i] - b.Min.m[i]) / v.m[i], *tlast);
+        }
+
+        // No overlap possible if time of first contact occurs after time of last contact
+        if (*tfirst > *tlast)
+            return false;
+    }
+
     return true;
 }

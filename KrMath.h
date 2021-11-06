@@ -1226,7 +1226,7 @@ inline T IntegrateRK4(const T &x, float t, float h, Function f)
 float TriangleAreaSigned(Vec2 a, Vec2 b, Vec2 c);
 float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c);
 bool IsTriangleClockwise(Vec2 a, Vec2 b, Vec2 c);
-Vec2 RectangleCorner(Rect b, uint32_t n); // n=00,01,10,11 for 4 different corners
+Vec2 RectCorner(Rect b, uint32_t n); // n=00,01,10,11 for 4 different corners
 
 float PointToSegmentLengthSq(Vec2 p, Vec2 a, Vec2 b);
 float PointToRectLengthSq(Vec2 p, Rect rect);
@@ -1430,3 +1430,7 @@ bool IntersectCircleRay(Circle circle, Vec2 ray_origin, Vec2 ray_dir, float *t, 
 bool IntersectCircleSegment(Circle circle, Vec2 p, Vec2 q, float *t);
 bool IntersectRayRect(Vec2 ray_origin, Vec2 ray_dir, Rect rect, float *tmin, Vec2 *q);
 bool IntersectRectSegment(Vec2 a, Vec2 b, Rect rect, float *tmin, Vec2 *q);
+
+bool CircleVsCircleDynamic(Circle c0, Circle c1, Vec2 v0, Vec2 v1, float *t);
+bool CircleVsRectDynamic(Circle c, Vec2 d, Rect b, float *t);
+bool RectVsRectDynamic(Rect a, Rect b, Vec2 va, Vec2 vb, float *tfirst, float *tlast);

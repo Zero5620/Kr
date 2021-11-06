@@ -1721,6 +1721,76 @@ bool IsPolygonConvex(const Vec2 *vertices, uint32_t count) {
 	return true;
 }
 
+int64_t PointFarthestFromEdge(Vec2 a, Vec2 b, Vec2 *p, uint32_t n) {
+	Vec2 e = b - a;
+	Vec2 eperp = Vec2(-e.y, e.x);
+
+	int64_t best_index = -1;
+	float max_value = -FLT_MAX, right_most_value = -FLT_MAX;
+
+	for (uint32_t i = 1; i < n; i++) {
+		float d = DotProduct(p[i] - a, eperp);
+		float r = DotProduct(p[i] - a, e);
+		if (d > max_value || (d == max_value && r > right_most_value)) {
+			best_index = (int64_t)i;
+			max_value = d;
+			right_most_value = r;
+		}
+	}
+
+	return best_index;
+}
+
+Extreme_Point_Index ExtremePointsAlongDirection(Vec2 dir, Vec2 *pt, uint32_t n) {
+	float min_proj = FLT_MAX, max_proj = -FLT_MAX;
+
+    Extreme_Point_Index extreme_points;
+    extreme_points.Min = -1;
+    extreme_points.Max = -1;
+
+	for (uint32_t i = 0; i < n; i++) {
+		auto proj = DotProduct(pt[i], dir);
+
+		if (proj < min_proj) {
+			min_proj = proj;
+			extreme_points.Min = i;
+		}
+
+		if (proj > max_proj) {
+			max_proj = proj;
+			extreme_points.Max = i;
+		}
+	}
+
+    return extreme_points;
+}
+
+Extreme_Point_Index ExtremePointsOnRect(Vec2 *pt, uint32_t n) {
+	uint32_t minx = 0, maxx = 0, miny = 0, maxy = 0;
+
+	for (uint32_t i = 1; i < n; i++) {
+		if (pt[i].x < pt[minx].x) minx = i;
+		if (pt[i].x > pt[maxx].x) maxx = i;
+		if (pt[i].y < pt[miny].y) miny = i;
+		if (pt[i].y > pt[maxy].y) maxy = i;
+	}
+
+	float dist2x = DotProduct(pt[maxx] - pt[minx], pt[maxx] - pt[minx]);
+	float dist2y = DotProduct(pt[maxy] - pt[miny], pt[maxy] - pt[miny]);
+
+    Extreme_Point_Index extreme_points;
+	if (dist2y > dist2x) {
+		extreme_points.Max = maxy;
+		extreme_points.Min = miny;
+	}
+	else {
+		extreme_points.Min = minx;
+		extreme_points.Max = maxx;
+	}
+
+    return extreme_points;
+}
+
 //
 //
 //

@@ -997,6 +997,15 @@ bool IsQuadConvex(Vec2 a, Vec2 b, Vec2 c, Vec2 d);
 bool IsQuadConvex(Vec3 a, Vec3 b, Vec3 c, Vec3 d);
 bool IsPolygonConvex(const Vec2 *vertices, uint32_t count);
 
+int64_t PointFarthestFromEdge(Vec2 a, Vec2 b, Vec2 *p, uint32_t n);
+
+struct Extreme_Point_Index
+{
+    uint32_t Min, Max;
+};
+Extreme_Point_Index ExtremePointsAlongDirection(Vec2 dir, Vec2 *pt, uint32_t n);
+Extreme_Point_Index ExtremePointsOnRect(Vec2 *pt, uint32_t n);
+
 //
 //
 //

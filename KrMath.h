@@ -1069,9 +1069,7 @@ struct Rect
     Vec2 Min;
     Vec2 Max;
 
-    Rect()
-    {
-    }
+    Rect() = default;
     Rect(Vec2 min, Vec2 max) : Min(min), Max(max)
     {
     }
@@ -1080,6 +1078,14 @@ struct Rect
         Min = V2(min_x, min_y);
         Max = V2(max_x, max_y);
     }
+};
+
+struct Circle {
+	Vec2 Center;
+	float Radius;
+
+    Circle() = default;
+    Circle(Vec2 center, float radius): Center(center), Radius(radius){}
 };
 
 //
@@ -1156,6 +1162,16 @@ struct Extreme_Point_Index
 };
 Extreme_Point_Index ExtremePointsAlongDirection(Vec2 dir, Vec2 *pt, uint32_t n);
 Extreme_Point_Index ExtremePointsOnRect(Vec2 *pt, uint32_t n);
+
+Circle CircleFromDistancePoints(Vec2 *pt, uint32_t n);
+
+struct Minimum_Area_Rect
+{
+    Vec2 Center;
+    Vec2 Normals[2];
+    float Area;
+};
+Minimum_Area_Rect MinimumAreaRect(Vec2 *pt, uint32_t num_pts);
 
 //
 //

@@ -1869,6 +1869,50 @@ Extreme_Point_Index ExtremePointsOnRect(Vec2 *pt, uint32_t n)
     return extreme_points;
 }
 
+Circle CircleFromDistancePoints(Vec2 *pt, uint32_t n) {
+	auto extreme_points = ExtremePointsOnRect(pt, n);
+	Circle c;
+	c.Center = (pt[extreme_points.Min] + pt[extreme_points.Max]) * 0.5f;
+	c.Radius = DotProduct(pt[extreme_points.Max] - c.Center, pt[extreme_points.Max] - c.Center);
+	c.Radius = sqrtf(c.Radius);
+	return c;
+}
+
+Minimum_Area_Rect MinimumAreaRect(Vec2 *pt, uint32_t num_pts) {
+    Minimum_Area_Rect min;
+    min.Center = V2(INFINITY, INFINITY);
+    min.Normals[0] = V2(0);
+    min.Normals[1] = V2(0);
+	min.Area = FLT_MAX;
+
+	for (uint32_t i = 0, j = num_pts - 1; i < num_pts; j = i, i++) {
+		auto e0 = pt[i] - pt[j];
+		e0 /= Length(e0);
+		auto e1 = V2(-e0.y, e0.x);
+
+		float min0 = 0.0f, min1 = 0.0f, max0 = 0.0f, max1 = 0.0f;
+		for (uint32_t k = 0; k < num_pts; k++) {
+			Vec2 d = pt[k] - pt[j];
+			float dot = DotProduct(d, e0);
+			if (dot < min0) min0 = dot;
+			if (dot > max0) max0 = dot;
+			dot = DotProduct(d, e1);
+			if (dot < min1) min1 = dot;
+			if (dot > max1) max1 = dot;
+		}
+		float area = (max0 - min0) * (max1 - min1);
+
+		if (area < min.Area) {
+			min.Area = area;
+			min.Center = pt[j] + 0.5f * ((min0 + max0) * e0 + (min1 + max1) * e1);
+			min.Normals[0] = e0;
+			min.Normals[1] = e1;
+		}
+	}
+
+	return min;
+}
+
 //
 //
 //

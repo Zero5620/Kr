@@ -979,6 +979,17 @@ INLINE_PROCEDURE float PointToRectLength(Vec2 p, Rect rect)
     return MathSquareRoot(PointToRectLengthSq(p, rect));
 }
 
+Vec2 NearestPointBetweenPointSegment(Vec2 p, Vec2 a, Vec2 b, float *t);
+Vec2 NearestPointBetweenPointSegment(Vec2 p, Vec2 a, Vec2 b);
+Vec2 NearestPointBetweenOriginSegment(Vec2 a, Vec2 b, float *t);
+Vec2 NearestPointBetweenOriginSegment(Vec2 a, Vec2 b);
+Vec2 NearestPointBetweenPointRect(Vec2 a, Rect rect);
+Vec2 NearestPointBetweenOriginRect(Rect rect);
+Vec2 NearestPointBetweenPointTriangle(Vec2 p, Vec2 a, Vec2 b, Vec2 c);
+Vec2 NearestPointBetweenOriginTriangle(Vec2 a, Vec2 b, Vec2 c);
+
+float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s, float *t, Vec2 *c1, Vec2 *c2);
+
 //
 //
 //

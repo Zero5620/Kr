@@ -1442,6 +1442,201 @@ float PointToRectLengthSq(Vec2 p, Rect rect) {
 	return dist2;
 }
 
+Vec2 NearestPointBetweenPointSegment(Vec2 p, Vec2 a, Vec2 b, float *t) {
+	Vec2 ab = b - a;
+	float len = DotProduct(ab, ab);
+	*t = DotProduct(p - a, ab) / len;
+	*t = Clamp(0, 1, *t);
+	return a + (*t * ab);
+}
+
+Vec2 NearestPointBetweenPointSegment(Vec2 p, Vec2 a, Vec2 b) {
+	float t;
+	return NearestPointBetweenPointSegment(p, a, b, &t);
+}
+
+Vec2 NearestPointBetweenOriginSegment(Vec2 a, Vec2 b, float *t) {
+	Vec2 ab = b - a;
+	float len = DotProduct(ab, ab);
+	*t = DotProduct(-a, ab) / len;
+	*t = Clamp(0, 1, *t);
+	return a + (*t * ab);
+}
+
+Vec2 NearestPointBetweenOriginSegment(Vec2 a, Vec2 b) {
+	float t;
+	return NearestPointBetweenOriginSegment(a, b, &t);
+}
+
+Vec2 NearestPointBetweenPointRect(Vec2 p, Rect rect) {
+	Vec2 q;
+	for (uint32_t i = 0; i < 2; i++) {
+		float v = p.m[i];
+		v = Maximum(v, rect.Min.m[i]);
+		v = Minimum(v, rect.Max.m[i]);
+		q.m[i] = v;
+	}
+	return q;
+}
+
+Vec2 NearestPointBetweenOriginRect(Rect rect) {
+	return NearestPointBetweenPointRect(Vec2(0), rect);
+}
+
+Vec2 NearestPointBetweenPointTriangle(Vec2 p, Vec2 a, Vec2 b, Vec2 c) {
+	// Check if P in vertex region outside A
+	Vec2 ab = b - a;
+	Vec2 ac = c - a;
+	Vec2 ap = p - a;
+	float d1 = DotProduct(ab, ap);
+	float d2 = DotProduct(ac, ap);
+	if (d1 <= 0.0f && d2 <= 0.0f) return a; // barycentric coordinates (1,0,0)
+
+	// Check if P in vertex region outside B
+	Vec2 bp = p - b;
+	float d3 = DotProduct(ab, bp);
+	float d4 = DotProduct(ac, bp);
+	if (d3 >= 0.0f && d4 <= d3) return b; // barycentric coordinates (0,1,0)
+
+	// Check if P in edge region of AB, if so return projection of P onto AB
+	float vc = d1 * d4 - d3 * d2;
+	if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+		float v = d1 / (d1 - d3);
+		return a + v * ab; // barycentric coordinates (1-v,v,0)
+	}
+
+	// Check if P in vertex region outside C
+	Vec2 cp = p - c;
+	float d5 = DotProduct(ab, cp);
+	float d6 = DotProduct(ac, cp);
+	if (d6 >= 0.0f && d5 <= d6) return c; // barycentric coordinates (0,0,1)
+
+	// Check if P in edge region of AC, if so return projection of P onto AC
+	float vb = d5 * d2 - d1 * d6;
+	if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
+		float w = d2 / (d2 - d6);
+		return a + w * ac; // barycentric coordinates (1-w,0,w)
+	}
+
+	// Check if P in edge region of BC, if so return projection of P onto BC
+	float va = d3 * d6 - d5 * d4;
+	if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
+		float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+		return b + w * (c - b); // barycentric coordinates (0,1-w,w)
+	}
+
+	// P inside face region
+	float denom = 1.0f / (va + vb + vc);
+	float v = vb * denom;
+	float w = vc * denom;
+	return a + ab * v + ac * w;
+}
+
+Vec2 NearestPointBetweenOriginTriangle(Vec2 a, Vec2 b, Vec2 c) {
+	// Check if origin in vertex region outside A
+	Vec2 ab = b - a;
+	Vec2 ac = c - a;
+	Vec2 ap = -a;
+	float d1 = DotProduct(ab, ap);
+	float d2 = DotProduct(ac, ap);
+	if (d1 <= 0.0f && d2 <= 0.0f) return a; // barycentric coordinates (1,0,0)
+
+	// Check if P in vertex region outside B
+	Vec2 bp = -b;
+	float d3 = DotProduct(ab, bp);
+	float d4 = DotProduct(ac, bp);
+	if (d3 >= 0.0f && d4 <= d3) return b; // barycentric coordinates (0,1,0)
+
+	// Check if P in edge region of AB, if so return projection of P onto AB
+	float vc = d1 * d4 - d3 * d2;
+	if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) {
+		float v = d1 / (d1 - d3);
+		return a + v * ab; // barycentric coordinates (1-v,v,0)
+	}
+
+	// Check if P in vertex region outside C
+	Vec2 cp = -c;
+	float d5 = DotProduct(ab, cp);
+	float d6 = DotProduct(ac, cp);
+	if (d6 >= 0.0f && d5 <= d6) return c; // barycentric coordinates (0,0,1)
+
+	// Check if P in edge region of AC, if so return projection of P onto AC
+	float vb = d5 * d2 - d1 * d6;
+	if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) {
+		float w = d2 / (d2 - d6);
+		return a + w * ac; // barycentric coordinates (1-w,0,w)
+	}
+
+	// Check if P in edge region of BC, if so return projection of P onto BC
+	float va = d3 * d6 - d5 * d4;
+	if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) {
+		float w = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+		return b + w * (c - b); // barycentric coordinates (0,1-w,w)
+	}
+
+	// origin inside face region
+	float denom = 1.0f / (va + vb + vc);
+	float v = vb * denom;
+	float w = vc * denom;
+	return a + ab * v + ac * w;
+}
+
+float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s, float *t, Vec2 *c1, Vec2 *c2) {
+	Vec2 d1 = q1 - p1;
+	Vec2 d2 = q2 - p2;
+	Vec2 r = p1 - p2;
+	float a = DotProduct(d1, d1);
+	float e = DotProduct(d2, d2);
+	float f = DotProduct(d2, r);
+
+	// Check if either or both segments degenerate into points
+	if (a <= FLT_EPSILON && e <= FLT_EPSILON) {
+		// Both segments degenerate into points
+		*s = *t = 0.0f;
+		*c1 = p1;
+		*c2 = p2;
+		return DotProduct(*c1 - *c2, *c1 - *c2);
+	}
+
+	if (a <= FLT_EPSILON) {
+		// First segment degenerates into a point
+		*s = 0.0f;
+		*t = f / e;
+		*t = Clamp(0, 1, *t);
+	} else {
+		float c = DotProduct(d1, r);
+		if (e <= FLT_EPSILON) {
+			// Second segment degenerates into a point
+			*t = 0.0f;
+			*s = Clamp(0, 1, -c / a);
+		} else {
+			// The general nondegenerate case starts here
+			float b = DotProduct(d1, d2);
+			float denom = a * e - b * b;
+			if (denom != 0.0f) {
+				*s = Clamp(0, 1, (b * f - c * e) / denom);
+			} else {
+				*s = 0.0f;
+			}
+
+			float tnom = b * *s + f;
+			if (tnom < 0.0f) {
+				*t = 0.0f;
+				*s = Clamp(0, 1, -c / a);
+			} else if (tnom > e) {
+				*t = 1.0f;
+				*s = Clamp(0, 1, (b - c) / a);
+			} else {
+				*t = tnom / e;
+			}
+		}
+	}
+
+	*c1 = p1 + d1 * *s;
+	*c2 = p2 + d2 * *t;
+	return DotProduct(*c1 - *c2, *c1 - *c2);
+}
+
 //
 //
 //

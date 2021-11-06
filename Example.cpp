@@ -1,6 +1,7 @@
 #include "KrBase.h"
 #include "KrBaseCRT.h"
 #include "KrMath.h"
+#include "KrTokenizer.h"
 
 #include <stdio.h>
 
@@ -20,3 +21,4 @@ int main()
 #include "KrBase.c"
 #include "KrBaseCRT.c"
 #include "KrMath.cpp"
+#include "KrTokenizer.cpp"

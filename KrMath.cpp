@@ -1410,7 +1410,7 @@ float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c) {
 	return 0.5f * MathSquareRoot(px + py + pz);
 }
 
-bool TriangleIsClockwise(Vec2 a, Vec2 b, Vec2 c) {
+bool IsTriangleClockwise(Vec2 a, Vec2 b, Vec2 c) {
 	return Determinant(b - a, c - a) < 0.0f;
 }
 
@@ -1635,6 +1635,90 @@ float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s,
 	*c1 = p1 + d1 * *s;
 	*c2 = p2 + d2 * *t;
 	return DotProduct(*c1 - *c2, *c1 - *c2);
+}
+
+Vec3 Barycentric(Vec2 a, Vec2 b, Vec2 c, Vec2 p) {
+	auto m = TriangleAreaSignedTwiced(a, b, c);
+
+	float nu = TriangleAreaSignedTwiced(p, b, c);
+	float nv = TriangleAreaSignedTwiced(a, p, c);
+	float ood = 1.0f / m;
+
+	Vec3 res;
+	res.x = nu * ood;
+	res.y = nv * ood;
+	res.z = 1.0f - res.x - res.y;
+
+	return res;
+}
+
+Vec3 Barycentric(Vec3 a, Vec3 b, Vec3 c, Vec3 p) {
+	auto m = CrossProduct(b - a, c - a);
+
+	float nu, nv, ood;
+
+	// Absolute components for determining projection plane
+	float x = fabsf(m.x), y = fabsf(m.y), z = fabsf(m.z);
+
+	// Compute areas in plane of largest projection
+	if (x >= y && x >= z) {
+		// x is largest, project to the yz plane
+		nu = TriangleAreaSignedTwiced(p.y, p.z, b.y, b.z, c.y, c.z);
+		nv = TriangleAreaSignedTwiced(p.y, p.z, c.y, c.z, a.y, a.z);
+		ood = 1.0f / m.x;
+	}
+	else if (y >= x && y >= z) {
+		// y is largest, project to the xz plane
+		nu = TriangleAreaSignedTwiced(p.x, p.z, b.x, b.z, c.x, c.z);
+		nv = TriangleAreaSignedTwiced(p.x, p.z, c.x, c.z, a.x, a.z);
+		ood = 1.0f / -m.y;
+	}
+	else {
+		// z is largest, project to the xy plane
+		nu = TriangleAreaSignedTwiced(p.x, p.y, b.x, b.y, c.x, c.y);
+		nv = TriangleAreaSignedTwiced(p.x, p.y, c.x, c.y, a.x, a.y);
+		ood = 1.0f / m.z;
+	}
+
+	Vec3 res;
+	res.x = nu * ood;
+	res.y = nv * ood;
+	res.z = 1.0f - res.x - res.y;
+
+	return res;
+}
+
+bool IsQuadConvex(Vec2 a, Vec2 b, Vec2 c, Vec2 d) {
+	auto bda = Determinant(d - b, a - b);
+	auto bdc = Determinant(d - b, c - b);
+	if ((bda * bdc) >= 0.0f) return false;
+	auto acd = Determinant(c - a, d - a);
+	auto acb = Determinant(c - a, b - a);
+	return (acd * acb) < 0.0f;
+}
+
+bool IsQuadConvex(Vec3 a, Vec3 b, Vec3 c, Vec3 d) {
+	auto bda = CrossProduct(d - b, a - b);
+	auto bdc = CrossProduct(d - b, c - b);
+	if (DotProduct(bda, bdc) >= 0.0f) return false;
+	auto acd = CrossProduct(c - a, d - a);
+	auto acb = CrossProduct(c - a, b - a);
+	return DotProduct(acd, acb) < 0.0f;
+}
+
+bool IsPolygonConvex(const Vec2 *vertices, uint32_t count) {
+	Vec2 a, b, c;
+
+	for (uint32_t outer = 0; outer < count; ++outer) {
+		a = vertices[outer];
+		b = vertices[(outer + 1) % count];
+		c = vertices[(outer + 2) % count];
+
+		if (!IsTriangleClockwise(a, b, c))
+			return false;
+	}
+
+	return true;
 }
 
 //

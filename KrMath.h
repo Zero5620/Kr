@@ -963,7 +963,7 @@ inline T IntegrateRK4(const T &x, float t, float h, Function f) {
 
 float TriangleAreaSigned(Vec2 a, Vec2 b, Vec2 c);
 float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c);
-bool TriangleIsClockwise(Vec2 a, Vec2 b, Vec2 c);
+bool IsTriangleClockwise(Vec2 a, Vec2 b, Vec2 c);
 Vec2 RectangleCorner(Rect b, uint32_t n); // n=00,01,10,11 for 4 different corners
 
 float PointToSegmentLengthSq(Vec2 p, Vec2 a, Vec2 b);
@@ -989,6 +989,13 @@ Vec2 NearestPointBetweenPointTriangle(Vec2 p, Vec2 a, Vec2 b, Vec2 c);
 Vec2 NearestPointBetweenOriginTriangle(Vec2 a, Vec2 b, Vec2 c);
 
 float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s, float *t, Vec2 *c1, Vec2 *c2);
+
+Vec3 Barycentric(Vec2 a, Vec2 b, Vec2 c, Vec2 p);
+Vec3 Barycentric(Vec3 a, Vec3 b, Vec3 c, Vec3 p);
+
+bool IsQuadConvex(Vec2 a, Vec2 b, Vec2 c, Vec2 d);
+bool IsQuadConvex(Vec3 a, Vec3 b, Vec3 c, Vec3 d);
+bool IsPolygonConvex(const Vec2 *vertices, uint32_t count);
 
 //
 //

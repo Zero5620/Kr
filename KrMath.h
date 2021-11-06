@@ -44,12 +44,36 @@ struct Vec2i
         Vec2i result = Vec2i(x / b, y / b);
         return result;
     }
-    inline Vec2i &operator+=(Vec2i b) { *this = *this + b; return *this; }
-    inline Vec2i &operator-=(Vec2i b) { *this = *this - b; return *this; }
-    inline Vec2i &operator*=(Vec2i b) { *this = *this * b; return *this; }
-    inline Vec2i &operator/=(Vec2i b) { *this = *this / b; return *this; }
-    inline Vec2i &operator*=(int32_t b) { *this = *this * b; return *this; }
-    inline Vec2i &operator/=(int32_t b) { *this = *this / b; return *this; }
+    inline Vec2i &operator+=(Vec2i b)
+    {
+        *this = *this + b;
+        return *this;
+    }
+    inline Vec2i &operator-=(Vec2i b)
+    {
+        *this = *this - b;
+        return *this;
+    }
+    inline Vec2i &operator*=(Vec2i b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec2i &operator/=(Vec2i b)
+    {
+        *this = *this / b;
+        return *this;
+    }
+    inline Vec2i &operator*=(int32_t b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec2i &operator/=(int32_t b)
+    {
+        *this = *this / b;
+        return *this;
+    }
 };
 
 struct Vec3i
@@ -93,12 +117,36 @@ struct Vec3i
         Vec3i result = Vec3i(x / b, y / b, z / b);
         return result;
     }
-    inline Vec3i &operator+=(Vec3i b) { *this = *this + b; return *this; }
-    inline Vec3i &operator-=(Vec3i b) { *this = *this - b; return *this; }
-    inline Vec3i &operator*=(Vec3i b) { *this = *this * b; return *this; }
-    inline Vec3i &operator/=(Vec3i b) { *this = *this / b; return *this; }
-    inline Vec3i &operator*=(int32_t b) { *this = *this * b; return *this; }
-    inline Vec3i &operator/=(int32_t b) { *this = *this / b; return *this; }
+    inline Vec3i &operator+=(Vec3i b)
+    {
+        *this = *this + b;
+        return *this;
+    }
+    inline Vec3i &operator-=(Vec3i b)
+    {
+        *this = *this - b;
+        return *this;
+    }
+    inline Vec3i &operator*=(Vec3i b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec3i &operator/=(Vec3i b)
+    {
+        *this = *this / b;
+        return *this;
+    }
+    inline Vec3i &operator*=(int32_t b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec3i &operator/=(int32_t b)
+    {
+        *this = *this / b;
+        return *this;
+    }
 };
 
 struct Vec4i
@@ -142,12 +190,36 @@ struct Vec4i
         Vec4i result = Vec4i(x / b, y / b, z / b, w / b);
         return result;
     }
-    inline Vec4i &operator+=(Vec4i b) { *this = *this + b; return *this; }
-    inline Vec4i &operator-=(Vec4i b) { *this = *this - b; return *this; }
-    inline Vec4i &operator*=(Vec4i b) { *this = *this * b; return *this; }
-    inline Vec4i &operator/=(Vec4i b) { *this = *this / b; return *this; }
-    inline Vec4i &operator*=(int32_t b) { *this = *this * b; return *this; }
-    inline Vec4i &operator/=(int32_t b) { *this = *this / b; return *this; }
+    inline Vec4i &operator+=(Vec4i b)
+    {
+        *this = *this + b;
+        return *this;
+    }
+    inline Vec4i &operator-=(Vec4i b)
+    {
+        *this = *this - b;
+        return *this;
+    }
+    inline Vec4i &operator*=(Vec4i b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec4i &operator/=(Vec4i b)
+    {
+        *this = *this / b;
+        return *this;
+    }
+    inline Vec4i &operator*=(int32_t b)
+    {
+        *this = *this * b;
+        return *this;
+    }
+    inline Vec4i &operator/=(int32_t b)
+    {
+        *this = *this / b;
+        return *this;
+    }
 };
 
 constexpr double PI = 3.1415926535f;
@@ -1434,3 +1506,284 @@ bool IntersectRectSegment(Vec2 a, Vec2 b, Rect rect, float *tmin, Vec2 *q);
 bool CircleVsCircleDynamic(Circle c0, Circle c1, Vec2 v0, Vec2 v1, float *t);
 bool CircleVsRectDynamic(Circle c, Vec2 d, Rect b, float *t);
 bool RectVsRectDynamic(Rect a, Rect b, Vec2 va, Vec2 vb, float *tfirst, float *tlast);
+
+struct Nearest_Edge
+{
+    Vec2 Normal;
+    float Distance;
+    uint32_t Index[2];
+};
+Nearest_Edge NearestEdgeOnPolygonFromPoint(const Vec2 *vertices, uint32_t vertex_count, Vec2 point);
+Nearest_Edge NearestEdgeOnPolygonFromOrigin(const Vec2 *vertices, uint32_t vertex_count);
+Nearest_Edge NearestEdgeOnSupportPointsFromOrigin(const Support_Points *vertices, uint32_t vertex_count);
+
+bool NextSimplex(Vec2 *simplex, Vec2 *dir, uint32_t *n);
+bool NextSimplexEx(Support_Points *simplex, Vec2 *dir, uint32_t *n);
+
+#define GJK_EPA_TOLERANCE 0.00001f
+#define GJK_MAX_ITERATIONS 500
+
+template <typename ShapeA, typename ShapeB, typename... Args>
+bool IntersectShapesGJK(const ShapeA &sa, const ShapeB &sb, uint32_t max_iters, const Args &...args)
+{
+    Vec2 simplex[3];
+
+    Vec2 dir = V2(0, 1);
+    simplex[0] = Support(sa, sb, dir, args...);
+    dir = -simplex[0];
+    uint32_t n = 1;
+
+    Vec2 a;
+    for (uint32_t iter = 0; iter < max_iters; ++iter)
+    {
+        if (IsNull(dir))
+            return true;
+        a = Support(sa, sb, dir, args...);
+        if (DotProduct(a, dir) < 0.0f)
+            return false; // no intersection
+        simplex[n] = a;
+        n += 1;
+
+        if (NextSimplex(simplex, &dir, &n))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename Shape>
+bool IntersectPointShapeGJK(const Shape &s, Vec2 point, float size, Mat2 xform, Vec2 pos, uint32_t max_iters)
+{
+    Circle circle(point, size);
+    return IntersectShapesGJK(s, circle, max_iters, xform, pos, V2(0), IdentityMat2());
+}
+
+template <typename Shape>
+bool IntersectPointShapeGJK(const Shape &s, Vec2 point, float size, uint32_t max_iters)
+{
+    Circle circle(point, size);
+    return IntersectShapesGJK(s, circle, max_iters);
+}
+
+struct Nearest_Points
+{
+    Vec2 Points[2];
+    float DistanceSq;
+};
+
+template <typename ShapeA, typename ShapeB, typename... Args>
+bool NearestPointsShapesGJK(const ShapeA &sa, const ShapeB &sb, uint32_t max_iters, Nearest_Points *nearest_points, const Args &...args)
+{
+    Support_Points simplex[2];
+
+    Vec2 prev_dir = V2(1, 1);
+    simplex[0] = SupportEx(sa, sb, prev_dir, args...);
+    simplex[1] = SupportEx(sa, sb, -prev_dir, args...);
+
+    Support_Points c;
+    Vec2 p1, p2;
+
+    Vec2 d = NearestPointBetweenOriginSegment(simplex[0].p, simplex[1].p);
+    float dist = DotProduct(d, d);
+    float min_dist = FLT_MAX;
+
+    constexpr float EPSILON_SQ = FLT_EPSILON * FLT_EPSILON;
+    for (uint32_t iter = 0; iter < max_iters && min_dist - dist > EPSILON_SQ; ++iter)
+    {
+        if (IsNull(d))
+            break;
+
+        c = SupportEx(sa, sb, -d, args...);
+
+        if (IsNull(c.p - simplex[0].p) || IsNull(c.p - simplex[1].p))
+            break;
+
+        p1 = NearestPointBetweenOriginSegment(c.p, simplex[0].p);
+        p2 = NearestPointBetweenOriginSegment(c.p, simplex[1].p);
+
+        float p1_dist = DotProduct(p1, p1);
+        float p2_dist = DotProduct(p2, p2);
+
+        min_dist = dist;
+        prev_dir = d;
+
+        if (p1_dist < p2_dist)
+        {
+            d = p1;
+            dist = p1_dist;
+            simplex[1] = c;
+        }
+        else
+        {
+            d = p2;
+            dist = p2_dist;
+            simplex[0] = c;
+        }
+
+        // Since the previous search direction (towards origin) is in opposite direction of the new search direction
+        // origin in contained in the Minkowski difference, so the two shapes are colliding, distance in undefined
+        if (DotProduct(prev_dir, d) < 0.0f)
+            return false;
+    }
+
+    float tx, ty;
+    tx = simplex[1].p.x - simplex[0].p.x;
+    ty = simplex[1].p.y - simplex[0].p.y;
+
+    if (MathAbsolute(tx) > FLT_EPSILON)
+    {
+        tx = (d.x - simplex[0].p.x) / tx;
+    }
+    else
+    {
+        tx = 0;
+    }
+
+    if (MathAbsolute(ty) > FLT_EPSILON)
+    {
+        ty = (d.y - simplex[0].p.y) / ty;
+    }
+    else
+    {
+        ty = 0;
+    }
+
+    nearest_points->Points[0].x = simplex[0].a.x + tx * (simplex[1].a.x - simplex[0].a.x);
+    nearest_points->Points[0].y = simplex[0].a.y + ty * (simplex[1].a.y - simplex[0].a.y);
+    nearest_points->Points[1].x = simplex[0].b.x + tx * (simplex[1].b.x - simplex[0].b.x);
+    nearest_points->Points[1].y = simplex[0].b.y + ty * (simplex[1].b.y - simplex[0].b.y);
+    nearest_points->DistanceSq = dist;
+
+    return true;
+}
+
+struct Contact_Manifold2D
+{
+    Vec2 Normal;
+    Vec2 Contacts[2];
+    float Penetration;
+};
+
+template <typename ShapeA, typename ShapeB, typename... Args>
+bool ShapeVsShapeGJKEPA(const ShapeA &sa, const ShapeB &sb, float tolerance, uint32_t max_iters, Support_Points *simplex_scratch, Contact_Manifold2D *manifold, const Args &...args)
+{
+    Support_Points *simplex = simplex_scratch;
+    uint32_t vertex_count = 1;
+
+    Vec2 dir = V2(1, 1);
+    simplex[0] = SupportEx(sa, sb, dir, args...);
+    dir = -simplex[0].p;
+
+    Support_Points s;
+    for (uint32_t iter = 0; iter < max_iters; ++iter)
+    {
+        if (IsNull(dir))
+            break;
+        s = SupportEx(sa, sb, dir, args...);
+        if (DotProduct(s.p, dir) < 0.0f)
+            return false; // no intersection
+        simplex[vertex_count] = s;
+        vertex_count += 1;
+
+        if (NextSimplexEx(simplex, &dir, &vertex_count))
+        {
+            break;
+        }
+    }
+
+    Vec2 directions[] = {
+        {-1, 1}, {0, -1}, {1, 0}, {-1, 0}, {1, -1}, {0, 1}, {-1, -1}};
+
+    // Check for degenerate polygon that is reduced to line
+    if (vertex_count == 3)
+    {
+        if (IsNull(simplex[2].p - simplex[0].p) || IsNull(simplex[2].p - simplex[1].p))
+        {
+            vertex_count -= 1;
+        }
+        if (IsNull(simplex[0].p - simplex[1].p))
+        {
+            simplex[1] = simplex[2];
+            vertex_count -= 1;
+        }
+    }
+
+    // Make 2 points for EPA
+    if (vertex_count == 1)
+    {
+        for (uint32_t index = 0; index < ArrayCount(directions); ++index)
+        {
+            simplex[1] = SupportEx(sa, sb, directions[index], args...);
+            if (!IsNull(simplex[0].p - simplex[1].p))
+                break;
+        }
+        Assert(!IsNull(simplex[0].p - simplex[1].p));
+        vertex_count += 1;
+    }
+
+    Nearest_Edge nearest_edge;
+    float distance_from_origin;
+
+    for (uint32_t iter = 0; iter < max_iters; ++iter)
+    {
+        nearest_edge = NearestEdgeOnSupportPointsFromOrigin(simplex, vertex_count);
+
+        s = SupportEx(sa, sb, nearest_edge.Normal, args...);
+
+        float d = DotProduct(s.p, nearest_edge.Normal);
+        if (d - nearest_edge.Distance < tolerance)
+        {
+            distance_from_origin = d;
+            break;
+        }
+        else
+        {
+            // @Speed : Insering element in order in the middle of a array is slow for large arrays
+            for (uint32_t dst_index = vertex_count; dst_index > nearest_edge.Index[1]; --dst_index)
+            {
+                uint32_t src_index = dst_index - 1;
+                simplex[dst_index] = simplex[src_index];
+            }
+            simplex[nearest_edge.Index[1]] = s;
+            vertex_count += 1;
+        }
+    }
+
+    Support_Points &s0 = simplex[nearest_edge.Index[0]];
+    Support_Points &s1 = simplex[nearest_edge.Index[1]];
+
+    Vec2 closest_point = distance_from_origin * nearest_edge.Normal;
+
+    float tx, ty;
+    tx = s1.p.x - s0.p.x;
+    ty = s1.p.y - s0.p.y;
+
+    if (MathAbsolute(tx) > FLT_EPSILON)
+    {
+        tx = (closest_point.x - s0.p.x) / tx;
+    }
+    else
+    {
+        tx = 0;
+    }
+
+    if (MathAbsolute(ty) > FLT_EPSILON)
+    {
+        ty = (closest_point.y - s0.p.y) / ty;
+    }
+    else
+    {
+        ty = 0;
+    }
+
+    manifold->Normal = nearest_edge.Normal;
+    manifold->Contacts[0].x = s0.a.x + tx * (s1.a.x - s0.a.x);
+    manifold->Contacts[0].y = s0.a.y + ty * (s1.a.y - s0.a.y);
+    manifold->Contacts[1].x = s0.b.x + tx * (s1.b.x - s0.b.x);
+    manifold->Contacts[1].y = s0.b.y + ty * (s1.b.y - s0.b.y);
+    manifold->Penetration = distance_from_origin;
+
+    return true;
+}

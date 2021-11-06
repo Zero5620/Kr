@@ -2881,3 +2881,287 @@ bool RectVsRectDynamic(Rect a, Rect b, Vec2 va, Vec2 vb, float *tfirst, float *t
 
     return true;
 }
+
+Nearest_Edge NearestEdgeOnPolygonFromPoint(const Vec2 *vertices, uint32_t vertex_count, Vec2 point)
+{
+    Nearest_Edge edge;
+    edge.Distance = FLT_MAX;
+
+    for (uint32_t p_index = 0; p_index < vertex_count; p_index += 1)
+    {
+        uint32_t q_index = ((p_index + 1) == vertex_count) ? 0 : p_index + 1;
+
+        auto a = vertices[p_index];
+        auto b = vertices[q_index];
+        auto e = b - a;
+
+        Vec2 n = NormalizeChecked(V2(-e.y, e.x));
+
+        float d = DotProduct(n, a - point);
+        if (d < edge.Distance)
+        {
+            edge.Normal = n;
+            edge.Distance = d;
+            edge.Index[0] = p_index;
+            edge.Index[1] = q_index;
+        }
+    }
+
+    return edge;
+}
+
+Nearest_Edge NearestEdgeOnPolygonFromOrigin(const Vec2 *vertices, uint32_t vertex_count)
+{
+    Nearest_Edge edge;
+    edge.Distance = FLT_MAX;
+
+    for (uint32_t p_index = 0; p_index < vertex_count; p_index += 1)
+    {
+        uint32_t q_index = ((p_index + 1) == vertex_count) ? 0 : p_index + 1;
+
+        auto a = vertices[p_index];
+        auto b = vertices[q_index];
+        auto e = b - a;
+
+        Vec2 n = NormalizeChecked(V2(-e.y, e.x));
+
+        float d = DotProduct(n, a);
+        if (d < edge.Distance)
+        {
+            edge.Normal = n;
+            edge.Distance = d;
+            edge.Index[0] = p_index;
+            edge.Index[1] = q_index;
+        }
+    }
+
+    return edge;
+}
+
+Nearest_Edge NearestEdgeOnSupportPointsFromOrigin(const Support_Points *vertices, uint32_t vertex_count)
+{
+    Nearest_Edge edge;
+    edge.Distance = FLT_MAX;
+
+    for (uint32_t p_index = 0; p_index < vertex_count; p_index += 1)
+    {
+        uint32_t q_index = ((p_index + 1) == vertex_count) ? 0 : p_index + 1;
+
+        auto a = vertices[p_index].p;
+        auto b = vertices[q_index].p;
+        auto e = b - a;
+
+        Vec2 n = NormalizeChecked(V2(-e.y, e.x));
+
+        float d = DotProduct(n, a);
+        if (d < edge.Distance)
+        {
+            edge.Normal = n;
+            edge.Distance = d;
+            edge.Index[0] = p_index;
+            edge.Index[1] = q_index;
+        }
+    }
+
+    return edge;
+}
+
+bool NextSimplex(Vec2 *simplex, Vec2 *dir, uint32_t *n)
+{
+    switch (*n)
+    {
+    case 2:
+    {
+        // a = simplex[1]
+        // b = simplex[0]
+        Vec2 ab = simplex[0] - simplex[1];
+        Vec2 ao = -simplex[1];
+        if (DotProduct(ao, ab) > 0.0f)
+        {
+            float det = Determinant(simplex[1], simplex[0]);
+            dir->x = -ab.y * det;
+            dir->y = ab.x * det;
+        }
+        else
+        {
+            *dir = ao;
+            simplex[0] = simplex[1];
+            *n = 1;
+        }
+    }
+    break;
+
+    case 3:
+    {
+        // a = simplex[2]
+        // b = simplex[1]
+        // c = simplex[0]
+        Vec2 ab = simplex[1] - simplex[2];
+        Vec2 ac = simplex[0] - simplex[2];
+        Vec2 ao = -simplex[2];
+        float abc = Determinant(ab, ac);
+
+        if (DotProduct(V2(-ac.y * abc, ac.x * abc), ao) > 0.0f)
+        {
+            if (DotProduct(ac, ao) > 0.0f)
+            {
+                float det = Determinant(simplex[2], simplex[0]);
+                dir->x = -ac.y * det;
+                dir->y = ac.x * det;
+
+                simplex[1] = simplex[0];
+                simplex[0] = simplex[2];
+
+                *n = 2;
+            }
+            else
+            {
+                if (DotProduct(ab, ao) > 0.0f)
+                {
+                    float det = Determinant(simplex[2], simplex[1]);
+                    dir->x = -ab.y * det;
+                    dir->y = ab.x * det;
+                    simplex[0] = simplex[2];
+                    *n = 2;
+                }
+                else
+                {
+                    *dir = -simplex[2];
+                    simplex[0] = simplex[2];
+                    *n = 1;
+                }
+            }
+        }
+        else
+        {
+            if (DotProduct(V2(ab.y * abc, -ab.x * abc), ao) > 0.0f)
+            {
+                if (DotProduct(ab, ao) > 0.0f)
+                {
+                    float det = Determinant(simplex[2], simplex[1]);
+                    dir->x = -ab.y * det;
+                    dir->y = ab.x * det;
+                    simplex[0] = simplex[2];
+                    *n = 2;
+                }
+                else
+                {
+                    *dir = -simplex[2];
+                    simplex[0] = simplex[2];
+                    *n = 1;
+                }
+            }
+            else
+            {
+                // point is inside the triangle
+                return true;
+            }
+        }
+    }
+    break;
+
+        NoDefaultCase();
+    }
+
+    return false;
+}
+
+bool NextSimplexEx(Support_Points *simplex, Vec2 *dir, uint32_t *n)
+{
+    switch (*n)
+    {
+    case 2:
+    {
+        // a = simplex[1]
+        // b = simplex[0]
+        Vec2 ab = simplex[0].p - simplex[1].p;
+        Vec2 ao = -simplex[1].p;
+        if (DotProduct(ao, ab) > 0.0f)
+        {
+            float det = Determinant(simplex[1].p, simplex[0].p);
+            dir->x = -ab.y * det;
+            dir->y = ab.x * det;
+        }
+        else
+        {
+            *dir = ao;
+            simplex[0] = simplex[1];
+            *n = 1;
+        }
+    }
+    break;
+
+    case 3:
+    {
+        // a = simplex[2]
+        // b = simplex[1]
+        // c = simplex[0]
+        Vec2 ab = simplex[1].p - simplex[2].p;
+        Vec2 ac = simplex[0].p - simplex[2].p;
+        Vec2 ao = -simplex[2].p;
+        float abc = Determinant(ab, ac);
+
+        if (DotProduct(V2(-ac.y * abc, ac.x * abc), ao) > 0.0f)
+        {
+            if (DotProduct(ac, ao) > 0.0f)
+            {
+                float det = Determinant(simplex[2].p, simplex[0].p);
+                dir->x = -ac.y * det;
+                dir->y = ac.x * det;
+
+                simplex[1] = simplex[0];
+                simplex[0] = simplex[2];
+
+                *n = 2;
+            }
+            else
+            {
+                if (DotProduct(ab, ao) > 0.0f)
+                {
+                    float det = Determinant(simplex[2].p, simplex[1].p);
+                    dir->x = -ab.y * det;
+                    dir->y = ab.x * det;
+                    simplex[0] = simplex[2];
+                    *n = 2;
+                }
+                else
+                {
+                    *dir = -simplex[2].p;
+                    simplex[0] = simplex[2];
+                    *n = 1;
+                }
+            }
+        }
+        else
+        {
+            if (DotProduct(V2(ab.y * abc, -ab.x * abc), ao) > 0.0f)
+            {
+                if (DotProduct(ab, ao) > 0.0f)
+                {
+                    float det = Determinant(simplex[2].p, simplex[1].p);
+                    dir->x = -ab.y * det;
+                    dir->y = ab.x * det;
+                    simplex[0] = simplex[2];
+                    *n = 2;
+                }
+                else
+                {
+                    *dir = -simplex[2].p;
+                    simplex[0] = simplex[2];
+                    *n = 1;
+                }
+            }
+            else
+            {
+                // point is inside the triangle
+                return true;
+            }
+        }
+    }
+    break;
+
+        NoDefaultCase();
+    }
+
+    return false;
+}

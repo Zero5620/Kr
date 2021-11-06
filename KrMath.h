@@ -204,6 +204,9 @@ union Quat {
 #define ExpandVec2(v) (v).x, (v).y
 #define ExpandVec3(v) (v).x, (v).y, (v).z
 #define ExpandVec4(v) (v).x, (v).y, (v).z, (v).w
+#define Fmt_Vec2 "(%f, %f)"
+#define Fmt_Vec3 "(%f, %f, %f)"
+#define Fmt_Vec4 "(%f, %f, %f, %f)"
 
 #define DegreesToRadians(deg) ((deg) * (PI / 180))
 #define RadiansToDegrees(rad) ((rad) * (180 / PI))
@@ -785,7 +788,7 @@ Quat        operator*(Quat q1, Quat q2);
 Vec3        Rotate(Quat q, Vec3 v);
 INLINE_PROCEDURE Vec3 operator*(Quat q, Vec3 v)
 {
-    Rotate(q, v);
+    return Rotate(q, v);
 }
 Quat                          QuatFromAngleAxis(Vec3 axis, float angle);
 Quat                          QuatFromAngleAxisNormalized(Vec3 axis, float angle);

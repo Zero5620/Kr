@@ -22,7 +22,7 @@ extern "C"
     {
         Memory_Arena arena;
         arena.Reserved   = max_size;
-        arena.Memory     = VirtualMemoryAllocate(0, arena.Reserved);
+        arena.Memory     = (Uint8 *)VirtualMemoryAllocate(0, arena.Reserved);
         arena.CommitPos  = 0;
         arena.CurrentPos = 0;
         return arena;

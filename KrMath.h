@@ -966,6 +966,19 @@ float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c);
 bool TriangleIsClockwise(Vec2 a, Vec2 b, Vec2 c);
 Vec2 RectangleCorner(Rect b, uint32_t n); // n=00,01,10,11 for 4 different corners
 
+float PointToSegmentLengthSq(Vec2 p, Vec2 a, Vec2 b);
+float PointToRectLengthSq(Vec2 p, Rect rect);
+
+INLINE_PROCEDURE float PointToSegmentLength(Vec2 p, Vec2 a, Vec2 b)
+{ 
+    return MathSquareRoot(PointToSegmentLengthSq(p, a, b));
+}
+
+INLINE_PROCEDURE float PointToRectLength(Vec2 p, Rect rect)
+{ 
+    return MathSquareRoot(PointToRectLengthSq(p, rect));
+}
+
 //
 //
 //

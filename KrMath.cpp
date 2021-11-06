@@ -1421,6 +1421,27 @@ Vec2 RectangleCorner(Rect b, uint32_t n) {
 	return p;
 }
 
+float PointToSegmentLengthSq(Vec2 p, Vec2 a, Vec2 b) {
+	Vec2 ab = b - a, ap = p - a, bp = p - b;
+	float e = DotProduct(ap, ab);
+	// Handle cases where p projects outside ab
+	if (e <= 0.0f) return DotProduct(ap, ap);
+	float f = DotProduct(ab, ab);
+	if (e >= f) return DotProduct(bp, bp);
+	// Handle cases where p projects onto ab
+	return DotProduct(ap, ap) - e * e / f;
+}
+
+float PointToRectLengthSq(Vec2 p, Rect rect) {
+	float dist2 = 0;
+	for (uint32_t i = 0; i < 2; i++) {
+		float v = p.m[i];
+		if (v < rect.Min.m[i]) dist2 += (rect.Min.m[i] - v) * (rect.Min.m[i] - v);
+		if (v > rect.Max.m[i]) dist2 += (v - rect.Max.m[i]) * (v - rect.Max.m[i]);
+	}
+	return dist2;
+}
+
 //
 //
 //

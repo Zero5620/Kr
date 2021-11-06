@@ -1400,6 +1400,9 @@ Rect RectEnclosingCapsule(Capsule capsule, Mat2 xform, Vec2 pos);
 Rect RectEnclosingPolygon(Polygon polygon);
 Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos);
 
+Rect TransformRect(Rect a, Mat2 mat, Vec2 t);
+Rect TransformRect(Rect a, float rot, Vec2 t);
+
 //
 //
 //

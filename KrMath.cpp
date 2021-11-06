@@ -2262,6 +2262,30 @@ Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos)
     return rect;
 }
 
+Rect TransformRect(Rect a, Mat2 mat, Vec2 t) {
+	Rect b;
+	for (uint32_t i = 0; i < 2; i++) {
+		b.Min.m[i] = b.Max.m[i] = t.m[i];
+		for (uint32_t j = 0; j < 2; j++) {
+			float e = mat.m2[i][j] * a.Min.m[j];
+			float f = mat.m2[i][j] * a.Max.m[j];
+			if (e < f) {
+				b.Min.m[i] += e;
+				b.Max.m[i] += f;
+			}
+			else {
+				b.Min.m[i] += f;
+				b.Max.m[i] += e;
+			}
+		}
+	}
+	return b;
+}
+
+Rect TransformRect(Rect a, float rot, Vec2 t) {
+	return TransformRect(a, RotationMat2(rot), t);
+}
+
 //
 //
 //

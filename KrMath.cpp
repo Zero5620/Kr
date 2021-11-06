@@ -1617,6 +1617,8 @@ Vec2 NearestPointBetweenOriginTriangle(Vec2 a, Vec2 b, Vec2 c)
 
 float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s, float *t, Vec2 *c1, Vec2 *c2)
 {
+    constexpr float EPSILON = FLT_EPSILON;
+
     Vec2 d1 = q1 - p1;
     Vec2 d2 = q2 - p2;
     Vec2 r = p1 - p2;
@@ -1625,7 +1627,7 @@ float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s,
     float f = DotProduct(d2, r);
 
     // Check if either or both segments degenerate into points
-    if (a <= FLT_EPSILON && e <= FLT_EPSILON)
+    if (a <= EPSILON && e <= EPSILON)
     {
         // Both segments degenerate into points
         *s = *t = 0.0f;
@@ -1634,7 +1636,7 @@ float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s,
         return DotProduct(*c1 - *c2, *c1 - *c2);
     }
 
-    if (a <= FLT_EPSILON)
+    if (a <= EPSILON)
     {
         // First segment degenerates into a point
         *s = 0.0f;
@@ -1644,7 +1646,7 @@ float NearestPointBetween2Segments(Vec2 p1, Vec2 q1, Vec2 p2, Vec2 q2, float *s,
     else
     {
         float c = DotProduct(d1, r);
-        if (e <= FLT_EPSILON)
+        if (e <= EPSILON)
         {
             // Second segment degenerates into a point
             *t = 0.0f;

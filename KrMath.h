@@ -3,13 +3,72 @@
 #include <float.h>
 #include <math.h>
 
-constexpr float PI = 3.1415926535f;
-constexpr float PI_INVERSE = 1.0f / PI;
-constexpr float TAU = PI / 2;
-constexpr float REAL_EPSILON = FLT_EPSILON;
-constexpr float REAL_MAX = FLT_MAX;
-constexpr float REAL_MIN = FLT_MIN;
-constexpr float REAL_INFINITY = INFINITY;
+struct Vec2i
+{
+    int32_t x, y;
+
+    Vec2i() = default;
+    Vec2i(int32_t a, int32_t b) : x(a), y(b) {}
+    int32_t &operator()(uint32_t index) { Assert(index < 2); return ((int32_t *)this)[index]; }
+    inline Vec2i operator+(Vec2i b) { Vec2i result = Vec2i(b.x + x, b.y + y); return result; }
+    inline Vec2i operator-(Vec2i b) { Vec2i result = Vec2i(x - b.x, y - b.y); return result; }
+    inline Vec2i operator*(Vec2i b) { Vec2i result = Vec2i(x * b.x, y * b.y); return result; }
+    inline Vec2i operator/(Vec2i b) { Vec2i result = Vec2i(x / b.x, y / b.y); return result; }
+    inline Vec2i operator*(int32_t b) { Vec2i result = Vec2i(x * b, y * b); return result; }
+    inline Vec2i operator/(int32_t b) { Vec2i result = Vec2i(x / b, y / b); return result; }
+    inline Vec2i operator+=(Vec2i b) { *this = *this + b; }
+    inline Vec2i operator-=(Vec2i b) { *this = *this - b; }
+    inline Vec2i operator*=(Vec2i b) { *this = *this * b; }
+    inline Vec2i operator/=(Vec2i b) { *this = *this / b; }
+    inline Vec2i operator*=(int32_t b) { *this = *this * b; }
+    inline Vec2i operator/=(int32_t b) { *this = *this / b; }
+};
+
+struct Vec3i
+{
+    int32_t x, y, z;
+
+    Vec3i() = default;
+    Vec3i(int32_t a, int32_t b, int32_t c) : x(a), y(b), z(c) {}
+    int32_t &operator()(uint32_t index) { Assert(index < 3); return ((int32_t *)this)[index]; }
+    inline Vec3i operator+(Vec3i b) { Vec3i result = Vec3i(b.x + x, b.y + y, b.z + z); return result; }
+    inline Vec3i operator-(Vec3i b) { Vec3i result = Vec3i(x - b.x, y - b.y, z - b.z); return result; }
+    inline Vec3i operator*(Vec3i b) { Vec3i result = Vec3i(x * b.x, y * b.y, z * b.z); return result; }
+    inline Vec3i operator/(Vec3i b) { Vec3i result = Vec3i(x / b.x, y / b.y, z / b.z); return result; }
+    inline Vec3i operator*(int32_t b) { Vec3i result = Vec3i(x * b, y * b, z * b); return result; }
+    inline Vec3i operator/(int32_t b) { Vec3i result = Vec3i(x / b, y / b, z / b); return result; }
+    inline Vec3i operator+=(Vec3i b) { *this = *this + b; }
+    inline Vec3i operator-=(Vec3i b) { *this = *this - b; }
+    inline Vec3i operator*=(Vec3i b) { *this = *this * b; }
+    inline Vec3i operator/=(Vec3i b) { *this = *this / b; }
+    inline Vec3i operator*=(int32_t b) { *this = *this * b; }
+    inline Vec3i operator/=(int32_t b) { *this = *this / b; }
+};
+
+struct Vec4i
+{
+    int32_t x, y, z, w;
+
+    Vec4i() = default;
+    Vec4i(int32_t a, int32_t b, int32_t c, int32_t d) : x(a), y(b), z(c), w(d) {}
+    int32_t &operator()(uint32_t index) { Assert(index < 4); return ((int32_t *)this)[index]; }
+    inline Vec4i operator+(Vec4i b) { Vec4i result = Vec4i(b.x + x, b.y + y, b.z + z, b.w + w); return result; }
+    inline Vec4i operator-(Vec4i b) { Vec4i result = Vec4i(x - b.x, y - b.y, z - b.z, w - b.w); return result; }
+    inline Vec4i operator*(Vec4i b) { Vec4i result = Vec4i(x * b.x, y * b.y, z * b.z, w * b.w); return result; }
+    inline Vec4i operator/(Vec4i b) { Vec4i result = Vec4i(x / b.x, y / b.y, z / b.z, w / b.w); return result; }
+    inline Vec4i operator*(int32_t b) { Vec4i result = Vec4i(x * b, y * b, z * b, w * b); return result; }
+    inline Vec4i operator/(int32_t b) { Vec4i result = Vec4i(x / b, y / b, z / b, w / b); return result; }
+    inline Vec4i operator+=(Vec4i b) { *this = *this + b; }
+    inline Vec4i operator-=(Vec4i b) { *this = *this - b; }
+    inline Vec4i operator*=(Vec4i b) { *this = *this * b; }
+    inline Vec4i operator/=(Vec4i b) { *this = *this / b; }
+    inline Vec4i operator*=(int32_t b) { *this = *this * b; }
+    inline Vec4i operator/=(int32_t b) { *this = *this / b; }
+};
+
+constexpr double PI = 3.1415926535f;
+constexpr double PI_INVERSE = 1.0f / PI;
+constexpr double TAU = PI / 2;
 
 union Vec2
 {
@@ -332,16 +391,19 @@ INLINE_PROCEDURE Vec4 MaximumVec(Vec4 a, Vec4 b)
 
 INLINE_PROCEDURE bool IsNull(Vec2 a)
 {
-    return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON;
+    constexpr float EPSILON = FLT_EPSILON;
+    return MathAbsolute(a.x) < EPSILON && MathAbsolute(a.y) < EPSILON;
 }
 INLINE_PROCEDURE bool IsNull(Vec3 a)
 {
-    return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON && MathAbsolute(a.z) < REAL_EPSILON;
+    constexpr float EPSILON = FLT_EPSILON;
+    return MathAbsolute(a.x) < EPSILON && MathAbsolute(a.y) < EPSILON && MathAbsolute(a.z) < EPSILON;
 }
 INLINE_PROCEDURE bool IsNull(Vec4 a)
 {
-    return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON && MathAbsolute(a.z) < REAL_EPSILON &&
-           MathAbsolute(a.w) < REAL_EPSILON;
+    constexpr float EPSILON = FLT_EPSILON;
+    return MathAbsolute(a.x) < EPSILON && MathAbsolute(a.y) < EPSILON && MathAbsolute(a.z) < EPSILON &&
+           MathAbsolute(a.w) < EPSILON;
 }
 
 INLINE_PROCEDURE Vec2 operator+(Vec2 a, Vec2 b)

@@ -961,4 +961,13 @@ inline T IntegrateRK4(const T &x, float t, float h, Function f) {
 //
 //
 
+float TriangleAreaSigned(Vec2 a, Vec2 b, Vec2 c);
+float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c);
+bool TriangleIsClockwise(Vec2 a, Vec2 b, Vec2 c);
+Vec2 RectangleCorner(Rect b, uint32_t n); // n=00,01,10,11 for 4 different corners
+
+//
+//
+//
+
 bool PointInsideRect(Vec2 p, Rect rect);

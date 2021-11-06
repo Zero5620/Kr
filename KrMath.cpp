@@ -1388,6 +1388,43 @@ Vec3 UintColorToVec3(UintColor c)
 //
 //
 
+static inline float TriangleAreaSignedTwiced(float x1, float y1, float x2, float y2, float x3, float y3) {
+	return (x1 - x2) * (y2 - y3) - (x2 - x3) * (y1 - y2);
+}
+
+static inline float TriangleAreaSignedTwiced(Vec2 a, Vec2 b, Vec2 c) {
+	return ((a.x - b.x) * (b.y - c.y) - (b.x - c.x) * (a.y - b.y));
+}
+
+float TriangleAreaSigned(Vec2 a, Vec2 b, Vec2 c) {
+	return 0.5f * TriangleAreaSignedTwiced(a, b, c);
+}
+
+float TriangleAreaSigned(Vec3 a, Vec3 b, Vec3 c) {
+	float px = TriangleAreaSignedTwiced(a.y, a.z, b.y, b.z, c.y, c.z);
+	float py = TriangleAreaSignedTwiced(a.z, a.x, b.z, b.x, c.z, c.x);
+	float pz = TriangleAreaSignedTwiced(a.x, a.y, b.x, b.y, c.x, c.y);
+	px *= px;
+	py *= py;
+	pz *= pz;
+	return 0.5f * MathSquareRoot(px + py + pz);
+}
+
+bool TriangleIsClockwise(Vec2 a, Vec2 b, Vec2 c) {
+	return Determinant(b - a, c - a) < 0.0f;
+}
+
+Vec2 RectangleCorner(Rect b, uint32_t n) {
+	Vec2 p;
+	p.x = ((n & 1) ? b.Max.x : b.Min.x);
+	p.y = ((n & 2) ? b.Max.y : b.Min.y);
+	return p;
+}
+
+//
+//
+//
+
 bool PointInsideRect(Vec2 p, Rect rect)
 {
     return p.x >= rect.Min.x && p.x <= rect.Max.x && p.y >= rect.Min.y && p.y <= rect.Max.y;

@@ -938,4 +938,27 @@ struct Rect
 //
 //
 
+template <typename T>
+inline T Integrate(const T &x, float h, const T &f) {
+	return x + h * f;
+}
+
+template <typename T, typename Function>
+inline T Integrate(const T &x, float t, float h, Function f) {
+	return x + h * f(t, x);
+}
+
+template <typename T, typename Function>
+inline T IntegrateRK4(const T &x, float t, float h, Function f) {
+	T k1 = h * f(t, x);
+	T k2 = h * f(t + 0.5f * h, x + 0.5f * k1);
+	T k3 = h * f(t + 0.5f * h, x + 0.5f * k2);
+	T k4 = h * f(t + h, x + k3);
+	return x + (k1 + 2.0f * (k2 + k3) + k4) / 6.0f;
+}
+
+//
+//
+//
+
 bool PointInsideRect(Vec2 p, Rect rect);

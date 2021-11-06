@@ -1784,6 +1784,159 @@ bool IsPolygonConvex(const Vec2 *vertices, uint32_t count)
     return true;
 }
 
+Vec2 Support(Circle c, Vec2 dir)
+{
+    Vec2 n = NormalizeChecked(dir);
+    return c.Center + n * c.Radius;
+}
+
+Vec2 Support(Rect m, Vec2 dir)
+{
+    return V2(dir.x >= 0.0f ? m.Max.x : m.Min.x, dir.y >= 0.0f ? m.Max.y : m.Min.y);
+}
+
+Vec2 Support(Capsule c, Vec2 dir)
+{
+    Vec2 n = NormalizeChecked(dir);
+    Vec2 s;
+
+    float da = DotProduct(c.Center[0], dir);
+    float db = DotProduct(c.Center[1], dir);
+    if (da > db)
+        s = c.Center[0];
+    else
+        s = c.Center[1];
+
+    return s + c.Radius * n;
+}
+
+Vec2 SupportPolygon(const Vec2 *vertices, uint64_t count, Vec2 dir)
+{
+    uint64_t index = 0;
+    float p = DotProduct(dir, vertices[index]);
+
+    uint64_t adj_index;
+    float adj_p;
+    while (true)
+    {
+        adj_index = (index + 1 == count ? 0 : index + 1);
+        adj_p = DotProduct(dir, vertices[adj_index]);
+        if (adj_p > p)
+        {
+            p = adj_p;
+            index = adj_index;
+        }
+        else
+        {
+            adj_index = (index - 1 == -1 ? count - 1 : index - 1);
+            adj_p = DotProduct(dir, vertices[adj_index]);
+            if (adj_p > p)
+            {
+                p = adj_p;
+                index = adj_index;
+            }
+            else
+            {
+                break;
+            }
+        }
+    }
+
+    return vertices[index];
+}
+
+Vec2 Support(Polygon polygon, Vec2 dir)
+{
+    return SupportPolygon(polygon.Vertices, polygon.VertexCount, dir);
+}
+
+Vec2 Support(Circle a, Circle b, Vec2 dir)
+{
+    Vec2 n = Normalize(dir);
+    return a.Center - b.Center + n * (a.Radius + b.Radius);
+}
+
+Vec2 Support(Circle a, Capsule b, Vec2 dir)
+{
+    Vec2 n = Normalize(dir);
+    Vec2 s = a.Center;
+    float da, db;
+
+    da = DotProduct(b.Center[0], dir);
+    db = DotProduct(b.Center[1], dir);
+    if (da > db)
+        s -= b.Center[0];
+    else
+        s -= b.Center[1];
+
+    return s + n * (a.Radius + b.Radius);
+}
+
+Vec2 Support(Capsule a, Circle b, Vec2 dir)
+{
+    Vec2 n = Normalize(dir);
+    Vec2 s;
+    float da, db;
+
+    da = DotProduct(a.Center[0], dir);
+    db = DotProduct(a.Center[1], dir);
+    if (da > db)
+        s = a.Center[0];
+    else
+        s = a.Center[1];
+
+    return s - b.Center + n * (a.Radius + b.Radius);
+}
+
+Vec2 Support(Capsule a, Capsule b, Vec2 dir)
+{
+    Vec2 n = Normalize(dir);
+    Vec2 s;
+    float da, db;
+
+    da = DotProduct(a.Center[0], dir);
+    db = DotProduct(a.Center[1], dir);
+    if (da > db)
+        s = a.Center[0];
+    else
+        s = a.Center[1];
+
+    da = DotProduct(b.Center[0], -dir);
+    db = DotProduct(b.Center[1], -dir);
+    if (da > db)
+        s -= b.Center[0];
+    else
+        s -= b.Center[1];
+
+    return s + n * (a.Radius + b.Radius);
+}
+
+Vec2 Support(Rect a, Rect b, Vec2 dir)
+{
+    Vec2 pa, pb;
+    if (dir.x >= 0.0f)
+    {
+        pa.x = a.Max.x;
+        pb.x = b.Min.x;
+    }
+    else
+    {
+        pa.x = a.Min.x;
+        pb.x = b.Max.x;
+    }
+    if (dir.y >= 0.0f)
+    {
+        pa.y = a.Max.y;
+        pb.y = b.Min.y;
+    }
+    else
+    {
+        pa.y = a.Min.y;
+        pb.y = b.Max.y;
+    }
+    return pa - pb;
+}
+
 int64_t PointFarthestFromEdge(Vec2 a, Vec2 b, Vec2 *p, uint32_t n)
 {
     Vec2 e = b - a;
@@ -1869,48 +2022,244 @@ Extreme_Point_Index ExtremePointsOnRect(Vec2 *pt, uint32_t n)
     return extreme_points;
 }
 
-Circle CircleFromDistancePoints(Vec2 *pt, uint32_t n) {
-	auto extreme_points = ExtremePointsOnRect(pt, n);
-	Circle c;
-	c.Center = (pt[extreme_points.Min] + pt[extreme_points.Max]) * 0.5f;
-	c.Radius = DotProduct(pt[extreme_points.Max] - c.Center, pt[extreme_points.Max] - c.Center);
-	c.Radius = sqrtf(c.Radius);
-	return c;
+Circle CircleFromDistancePoints(Vec2 *pt, uint32_t n)
+{
+    auto extreme_points = ExtremePointsOnRect(pt, n);
+    Circle c;
+    c.Center = (pt[extreme_points.Min] + pt[extreme_points.Max]) * 0.5f;
+    c.Radius = DotProduct(pt[extreme_points.Max] - c.Center, pt[extreme_points.Max] - c.Center);
+    c.Radius = sqrtf(c.Radius);
+    return c;
 }
 
-Minimum_Area_Rect MinimumAreaRect(Vec2 *pt, uint32_t num_pts) {
+Minimum_Area_Rect MinimumAreaRect(Vec2 *pt, uint32_t num_pts)
+{
     Minimum_Area_Rect min;
     min.Center = V2(INFINITY, INFINITY);
     min.Normals[0] = V2(0);
     min.Normals[1] = V2(0);
-	min.Area = FLT_MAX;
+    min.Area = FLT_MAX;
 
-	for (uint32_t i = 0, j = num_pts - 1; i < num_pts; j = i, i++) {
-		auto e0 = pt[i] - pt[j];
-		e0 /= Length(e0);
-		auto e1 = V2(-e0.y, e0.x);
+    for (uint32_t i = 0, j = num_pts - 1; i < num_pts; j = i, i++)
+    {
+        auto e0 = pt[i] - pt[j];
+        e0 /= Length(e0);
+        auto e1 = V2(-e0.y, e0.x);
 
-		float min0 = 0.0f, min1 = 0.0f, max0 = 0.0f, max1 = 0.0f;
-		for (uint32_t k = 0; k < num_pts; k++) {
-			Vec2 d = pt[k] - pt[j];
-			float dot = DotProduct(d, e0);
-			if (dot < min0) min0 = dot;
-			if (dot > max0) max0 = dot;
-			dot = DotProduct(d, e1);
-			if (dot < min1) min1 = dot;
-			if (dot > max1) max1 = dot;
-		}
-		float area = (max0 - min0) * (max1 - min1);
+        float min0 = 0.0f, min1 = 0.0f, max0 = 0.0f, max1 = 0.0f;
+        for (uint32_t k = 0; k < num_pts; k++)
+        {
+            Vec2 d = pt[k] - pt[j];
+            float dot = DotProduct(d, e0);
+            if (dot < min0)
+                min0 = dot;
+            if (dot > max0)
+                max0 = dot;
+            dot = DotProduct(d, e1);
+            if (dot < min1)
+                min1 = dot;
+            if (dot > max1)
+                max1 = dot;
+        }
+        float area = (max0 - min0) * (max1 - min1);
 
-		if (area < min.Area) {
-			min.Area = area;
-			min.Center = pt[j] + 0.5f * ((min0 + max0) * e0 + (min1 + max1) * e1);
-			min.Normals[0] = e0;
-			min.Normals[1] = e1;
-		}
-	}
+        if (area < min.Area)
+        {
+            min.Area = area;
+            min.Center = pt[j] + 0.5f * ((min0 + max0) * e0 + (min1 + max1) * e1);
+            min.Normals[0] = e0;
+            min.Normals[1] = e1;
+        }
+    }
 
-	return min;
+    return min;
+}
+
+Rect EnclosingRect(Rect a0, Rect a1)
+{
+    Rect a;
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        a.Min.m[i] = Minimum(a0.Min.m[i], a1.Min.m[i]);
+        a.Max.m[i] = Maximum(a0.Max.m[i], a1.Max.m[i]);
+    }
+    return a;
+}
+
+Circle EnclosingCircle(Circle c0, Circle c1)
+{
+    Circle c;
+    // Compute the squared distance between the circle centers
+    Vec2 d = c1.Center - c0.Center;
+    float dist2 = DotProduct(d, d);
+    float dr2 = c1.Radius - c0.Radius;
+    dr2 *= dr2;
+    if (dr2 >= dist2)
+    {
+        // The circle with the larger radius encloses the other
+        // just set c to be the larger of the two spheres
+        if (c1.Radius >= c0.Radius)
+            c = c1;
+        else
+            c = c0;
+    }
+    else
+    {
+        // Spheres partially overlapping or disjoint
+        float dist = MathSquareRoot(dist2);
+        c.Radius = (dist + c0.Radius + c1.Radius) * 0.5f;
+        c.Center = c0.Center;
+        if (dist > FLT_EPSILON)
+            c.Center += ((c.Radius - c0.Radius) / dist) * d;
+    }
+    return c;
+}
+
+Rect EnclosingRect(Rect r, Circle c)
+{
+    Rect b;
+    b.Min.x = c.Center.x - c.Radius;
+    b.Min.y = c.Center.y - c.Radius;
+    b.Max.x = c.Center.x + c.Radius;
+    b.Max.y = c.Center.y + c.Radius;
+    return EnclosingRect(r, b);
+}
+
+Rect RectEnclosingQuad(Vec2 a, Vec2 b, Vec2 c, Vec2 d)
+{
+    Vec2 points[] = {a, b, c, d};
+
+    Rect rect;
+    rect.Min = points[0];
+    rect.Max = points[0];
+
+    for (uint32_t index = 1; index < ArrayCount(points); ++index)
+    {
+        Vec2 *p = points + index;
+        rect.Min = MinimumVec(rect.Min, *p);
+        rect.Max = MaximumVec(rect.Max, *p);
+    }
+
+    return rect;
+}
+
+Rect RectEnclosingRect(Rect mm_rect, Vec2 pos, const Mat2 &xform)
+{
+    Vec2 a = xform * mm_rect.Min;
+    Vec2 b = xform * V2(mm_rect.Min.x, mm_rect.Max.y);
+    Vec2 c = xform * mm_rect.Max;
+    Vec2 d = xform * V2(mm_rect.Max.x, mm_rect.Min.y);
+    Rect result = RectEnclosingQuad(a, b, c, d);
+    result.Min += pos;
+    result.Max += pos;
+    return result;
+}
+
+Rect RectEnclosingCircle(Circle circle)
+{
+    Rect rect;
+    rect.Min = V2(-circle.Radius);
+    rect.Max = V2(circle.Radius);
+    rect.Min += circle.Center;
+    rect.Max += circle.Center;
+    return rect;
+}
+
+Rect RectEnclosingCircle(Circle circle, Vec2 p, Mat2 xform, Vec2 pos)
+{
+    Rect rect;
+
+    Vec2 a = Support(circle, xform, pos, V2(1, 0));
+    Vec2 b = Support(circle, xform, pos, V2(0, 1));
+    Vec2 c = Support(circle, xform, pos, V2(-1, 0));
+    Vec2 d = Support(circle, xform, pos, V2(0, -1));
+
+    rect.Min = V2(c.x, d.y);
+    rect.Max = V2(a.x, b.y);
+
+    return rect;
+}
+
+Rect RectEnclosingCapsule(Capsule capsule)
+{
+    Rect rect;
+
+    if (capsule.Center[0].x > capsule.Center[1].x)
+    {
+        rect.Min.x = capsule.Center[1].x;
+        rect.Max.x = capsule.Center[0].x;
+    }
+    else
+    {
+        rect.Min.x = capsule.Center[0].x;
+        rect.Max.x = capsule.Center[1].x;
+    }
+
+    if (capsule.Center[0].y > capsule.Center[1].y)
+    {
+        rect.Min.y = capsule.Center[1].y;
+        rect.Max.y = capsule.Center[0].y;
+    }
+    else
+    {
+        rect.Min.y = capsule.Center[0].y;
+        rect.Max.y = capsule.Center[1].y;
+    }
+
+    rect.Min -= V2(capsule.Radius);
+    rect.Max += V2(capsule.Radius);
+
+    return rect;
+}
+
+Rect RectEnclosingCapsule(Capsule capsule, Mat2 xform, Vec2 pos)
+{
+    Rect rect;
+
+    Vec2 a = Support(capsule, xform, pos, V2(1, 0));
+    Vec2 b = Support(capsule, xform, pos, V2(0, 1));
+    Vec2 c = Support(capsule, xform, pos, V2(-1, 0));
+    Vec2 d = Support(capsule, xform, pos, V2(0, -1));
+
+    rect.Min = V2(c.x, d.y);
+    rect.Max = V2(a.x, b.y);
+
+    return rect;
+}
+
+Rect RectEnclosingPolygon(Polygon polygon)
+{
+    Rect rect;
+    rect.Min = polygon.Vertices[0];
+    rect.Max = polygon.Vertices[0];
+
+    for (uint32_t index = 1; index < polygon.VertexCount; ++index)
+    {
+        const Vec2 *p = polygon.Vertices + index;
+        rect.Min = MinimumVec(rect.Min, *p);
+        rect.Max = MaximumVec(rect.Max, *p);
+    }
+
+    return rect;
+}
+
+Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos)
+{
+    Rect rect;
+    rect.Min = xform * polygon.Vertices[0];
+    rect.Max = xform * polygon.Vertices[0];
+
+    for (uint32_t index = 1; index < polygon.VertexCount; ++index)
+    {
+        const Vec2 *p = polygon.Vertices + index;
+        rect.Min = MinimumVec(rect.Min, xform * *p);
+        rect.Max = MaximumVec(rect.Max, xform * *p);
+    }
+
+    rect.Min += pos;
+    rect.Max += pos;
+
+    return rect;
 }
 
 //

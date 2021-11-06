@@ -9,19 +9,47 @@ struct Vec2i
 
     Vec2i() = default;
     Vec2i(int32_t a, int32_t b) : x(a), y(b) {}
-    int32_t &operator()(uint32_t index) { Assert(index < 2); return ((int32_t *)this)[index]; }
-    inline Vec2i operator+(Vec2i b) { Vec2i result = Vec2i(b.x + x, b.y + y); return result; }
-    inline Vec2i operator-(Vec2i b) { Vec2i result = Vec2i(x - b.x, y - b.y); return result; }
-    inline Vec2i operator*(Vec2i b) { Vec2i result = Vec2i(x * b.x, y * b.y); return result; }
-    inline Vec2i operator/(Vec2i b) { Vec2i result = Vec2i(x / b.x, y / b.y); return result; }
-    inline Vec2i operator*(int32_t b) { Vec2i result = Vec2i(x * b, y * b); return result; }
-    inline Vec2i operator/(int32_t b) { Vec2i result = Vec2i(x / b, y / b); return result; }
-    inline Vec2i operator+=(Vec2i b) { *this = *this + b; }
-    inline Vec2i operator-=(Vec2i b) { *this = *this - b; }
-    inline Vec2i operator*=(Vec2i b) { *this = *this * b; }
-    inline Vec2i operator/=(Vec2i b) { *this = *this / b; }
-    inline Vec2i operator*=(int32_t b) { *this = *this * b; }
-    inline Vec2i operator/=(int32_t b) { *this = *this / b; }
+    int32_t &operator()(uint32_t index)
+    {
+        Assert(index < 2);
+        return ((int32_t *)this)[index];
+    }
+    inline Vec2i operator+(Vec2i b)
+    {
+        Vec2i result = Vec2i(b.x + x, b.y + y);
+        return result;
+    }
+    inline Vec2i operator-(Vec2i b)
+    {
+        Vec2i result = Vec2i(x - b.x, y - b.y);
+        return result;
+    }
+    inline Vec2i operator*(Vec2i b)
+    {
+        Vec2i result = Vec2i(x * b.x, y * b.y);
+        return result;
+    }
+    inline Vec2i operator/(Vec2i b)
+    {
+        Vec2i result = Vec2i(x / b.x, y / b.y);
+        return result;
+    }
+    inline Vec2i operator*(int32_t b)
+    {
+        Vec2i result = Vec2i(x * b, y * b);
+        return result;
+    }
+    inline Vec2i operator/(int32_t b)
+    {
+        Vec2i result = Vec2i(x / b, y / b);
+        return result;
+    }
+    inline Vec2i &operator+=(Vec2i b) { *this = *this + b; return *this; }
+    inline Vec2i &operator-=(Vec2i b) { *this = *this - b; return *this; }
+    inline Vec2i &operator*=(Vec2i b) { *this = *this * b; return *this; }
+    inline Vec2i &operator/=(Vec2i b) { *this = *this / b; return *this; }
+    inline Vec2i &operator*=(int32_t b) { *this = *this * b; return *this; }
+    inline Vec2i &operator/=(int32_t b) { *this = *this / b; return *this; }
 };
 
 struct Vec3i
@@ -30,19 +58,47 @@ struct Vec3i
 
     Vec3i() = default;
     Vec3i(int32_t a, int32_t b, int32_t c) : x(a), y(b), z(c) {}
-    int32_t &operator()(uint32_t index) { Assert(index < 3); return ((int32_t *)this)[index]; }
-    inline Vec3i operator+(Vec3i b) { Vec3i result = Vec3i(b.x + x, b.y + y, b.z + z); return result; }
-    inline Vec3i operator-(Vec3i b) { Vec3i result = Vec3i(x - b.x, y - b.y, z - b.z); return result; }
-    inline Vec3i operator*(Vec3i b) { Vec3i result = Vec3i(x * b.x, y * b.y, z * b.z); return result; }
-    inline Vec3i operator/(Vec3i b) { Vec3i result = Vec3i(x / b.x, y / b.y, z / b.z); return result; }
-    inline Vec3i operator*(int32_t b) { Vec3i result = Vec3i(x * b, y * b, z * b); return result; }
-    inline Vec3i operator/(int32_t b) { Vec3i result = Vec3i(x / b, y / b, z / b); return result; }
-    inline Vec3i operator+=(Vec3i b) { *this = *this + b; }
-    inline Vec3i operator-=(Vec3i b) { *this = *this - b; }
-    inline Vec3i operator*=(Vec3i b) { *this = *this * b; }
-    inline Vec3i operator/=(Vec3i b) { *this = *this / b; }
-    inline Vec3i operator*=(int32_t b) { *this = *this * b; }
-    inline Vec3i operator/=(int32_t b) { *this = *this / b; }
+    int32_t &operator()(uint32_t index)
+    {
+        Assert(index < 3);
+        return ((int32_t *)this)[index];
+    }
+    inline Vec3i operator+(Vec3i b)
+    {
+        Vec3i result = Vec3i(b.x + x, b.y + y, b.z + z);
+        return result;
+    }
+    inline Vec3i operator-(Vec3i b)
+    {
+        Vec3i result = Vec3i(x - b.x, y - b.y, z - b.z);
+        return result;
+    }
+    inline Vec3i operator*(Vec3i b)
+    {
+        Vec3i result = Vec3i(x * b.x, y * b.y, z * b.z);
+        return result;
+    }
+    inline Vec3i operator/(Vec3i b)
+    {
+        Vec3i result = Vec3i(x / b.x, y / b.y, z / b.z);
+        return result;
+    }
+    inline Vec3i operator*(int32_t b)
+    {
+        Vec3i result = Vec3i(x * b, y * b, z * b);
+        return result;
+    }
+    inline Vec3i operator/(int32_t b)
+    {
+        Vec3i result = Vec3i(x / b, y / b, z / b);
+        return result;
+    }
+    inline Vec3i &operator+=(Vec3i b) { *this = *this + b; return *this; }
+    inline Vec3i &operator-=(Vec3i b) { *this = *this - b; return *this; }
+    inline Vec3i &operator*=(Vec3i b) { *this = *this * b; return *this; }
+    inline Vec3i &operator/=(Vec3i b) { *this = *this / b; return *this; }
+    inline Vec3i &operator*=(int32_t b) { *this = *this * b; return *this; }
+    inline Vec3i &operator/=(int32_t b) { *this = *this / b; return *this; }
 };
 
 struct Vec4i
@@ -51,19 +107,47 @@ struct Vec4i
 
     Vec4i() = default;
     Vec4i(int32_t a, int32_t b, int32_t c, int32_t d) : x(a), y(b), z(c), w(d) {}
-    int32_t &operator()(uint32_t index) { Assert(index < 4); return ((int32_t *)this)[index]; }
-    inline Vec4i operator+(Vec4i b) { Vec4i result = Vec4i(b.x + x, b.y + y, b.z + z, b.w + w); return result; }
-    inline Vec4i operator-(Vec4i b) { Vec4i result = Vec4i(x - b.x, y - b.y, z - b.z, w - b.w); return result; }
-    inline Vec4i operator*(Vec4i b) { Vec4i result = Vec4i(x * b.x, y * b.y, z * b.z, w * b.w); return result; }
-    inline Vec4i operator/(Vec4i b) { Vec4i result = Vec4i(x / b.x, y / b.y, z / b.z, w / b.w); return result; }
-    inline Vec4i operator*(int32_t b) { Vec4i result = Vec4i(x * b, y * b, z * b, w * b); return result; }
-    inline Vec4i operator/(int32_t b) { Vec4i result = Vec4i(x / b, y / b, z / b, w / b); return result; }
-    inline Vec4i operator+=(Vec4i b) { *this = *this + b; }
-    inline Vec4i operator-=(Vec4i b) { *this = *this - b; }
-    inline Vec4i operator*=(Vec4i b) { *this = *this * b; }
-    inline Vec4i operator/=(Vec4i b) { *this = *this / b; }
-    inline Vec4i operator*=(int32_t b) { *this = *this * b; }
-    inline Vec4i operator/=(int32_t b) { *this = *this / b; }
+    int32_t &operator()(uint32_t index)
+    {
+        Assert(index < 4);
+        return ((int32_t *)this)[index];
+    }
+    inline Vec4i operator+(Vec4i b)
+    {
+        Vec4i result = Vec4i(b.x + x, b.y + y, b.z + z, b.w + w);
+        return result;
+    }
+    inline Vec4i operator-(Vec4i b)
+    {
+        Vec4i result = Vec4i(x - b.x, y - b.y, z - b.z, w - b.w);
+        return result;
+    }
+    inline Vec4i operator*(Vec4i b)
+    {
+        Vec4i result = Vec4i(x * b.x, y * b.y, z * b.z, w * b.w);
+        return result;
+    }
+    inline Vec4i operator/(Vec4i b)
+    {
+        Vec4i result = Vec4i(x / b.x, y / b.y, z / b.z, w / b.w);
+        return result;
+    }
+    inline Vec4i operator*(int32_t b)
+    {
+        Vec4i result = Vec4i(x * b, y * b, z * b, w * b);
+        return result;
+    }
+    inline Vec4i operator/(int32_t b)
+    {
+        Vec4i result = Vec4i(x / b, y / b, z / b, w / b);
+        return result;
+    }
+    inline Vec4i &operator+=(Vec4i b) { *this = *this + b; return *this; }
+    inline Vec4i &operator-=(Vec4i b) { *this = *this - b; return *this; }
+    inline Vec4i &operator*=(Vec4i b) { *this = *this * b; return *this; }
+    inline Vec4i &operator/=(Vec4i b) { *this = *this / b; return *this; }
+    inline Vec4i &operator*=(int32_t b) { *this = *this * b; return *this; }
+    inline Vec4i &operator/=(int32_t b) { *this = *this / b; return *this; }
 };
 
 constexpr double PI = 3.1415926535f;
@@ -1080,12 +1164,33 @@ struct Rect
     }
 };
 
-struct Circle {
-	Vec2 Center;
-	float Radius;
+struct Circle
+{
+    Vec2 Center;
+    float Radius;
 
     Circle() = default;
-    Circle(Vec2 center, float radius): Center(center), Radius(radius){}
+    Circle(Vec2 center, float radius) : Center(center), Radius(radius) {}
+};
+
+struct Capsule
+{
+    Vec2 Center[2];
+    float Radius;
+
+    Capsule() = default;
+    Capsule(Vec2 a, Vec2 b, float radius)
+    {
+        Center[0] = a;
+        Center[1] = b;
+        Radius = radius;
+    }
+};
+
+struct Polygon
+{
+    uint64_t VertexCount;
+    Vec2 Vertices[3];
 };
 
 //
@@ -1154,6 +1259,115 @@ bool IsQuadConvex(Vec2 a, Vec2 b, Vec2 c, Vec2 d);
 bool IsQuadConvex(Vec3 a, Vec3 b, Vec3 c, Vec3 d);
 bool IsPolygonConvex(const Vec2 *vertices, uint32_t count);
 
+Vec2 Support(Circle c, Vec2 dir);
+Vec2 Support(Rect m, Vec2 dir);
+Vec2 Support(Capsule c, Vec2 dir);
+Vec2 SupportPolygon(const Vec2 *vertices, uint64_t count, Vec2 dir);
+Vec2 Support(Polygon p, Vec2 dir);
+
+Vec2 Support(Circle a, Circle b, Vec2 dir);
+Vec2 Support(Circle a, Capsule b, Vec2 dir);
+Vec2 Support(Capsule a, Circle b, Vec2 dir);
+Vec2 Support(Capsule a, Capsule b, Vec2 dir);
+Vec2 Support(Rect a, Rect b, Vec2 dir);
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Vec2 Support(const ShapeA &a, const ShapeB &b, Vec2 dir)
+{
+    return Support(a, dir) - Support(b, -dir);
+}
+
+template <typename Shape>
+INLINE_PROCEDURE Vec2 Support(const Shape &s, Mat2 xform, Vec2 pos, Vec2 dir)
+{
+    Vec2 p = Support(s, xform * dir);
+    p = p * xform + pos;
+    return p;
+}
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Vec2 Support(const ShapeA &a, const ShapeB &b, Vec2 dir, Mat2 a_xform, Vec2 a_pos, Mat2 b_xform, Vec2 b_pos)
+{
+    Vec2 p = Support(a, dir * a_xform);
+    p = a_xform * p + a_pos;
+
+    Vec2 q = Support(b, (-dir) * b_xform);
+    q = b_xform * q + b_pos;
+
+    return p - q;
+}
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Vec2 Support(const ShapeA &a, const ShapeB &b, Vec2 dir, Mat2 ta_xform, Vec2 ta_p, Mat2 tb_xform, Vec2 tb_p, Vec2 a_dp, Vec2 b_dp)
+{
+    Vec2 p = Support(a, dir * ta_xform);
+    p = ta_xform * p + ta_p;
+
+    Vec2 q = Support(b, (-dir) * tb_xform);
+    q = tb_xform * q + tb_p;
+
+    if (DotProduct(a_dp, -dir) < 0.0f)
+        p += a_dp;
+
+    if (DotProduct(b_dp, dir) < 0.0f)
+        q += b_dp;
+
+    return p - q;
+}
+
+struct Support_Points
+{
+    Vec2 a;
+    Vec2 b;
+    Vec2 p;
+};
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Support_Points SupportEx(const ShapeA &a, const ShapeB &b, Vec2 dir)
+{
+    Support_Points s;
+    s.a = Support(a, dir);
+    s.b = Support(b, -dir);
+    s.p = s.a - s.b;
+    return s;
+}
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Support_Points SupportEx(const ShapeA &a, const ShapeB &b, Vec2 dir, Mat2 ta_xform, Vec2 ta_p, Mat2 tb_xform, Vec2 tb_p)
+{
+    Support_Points s;
+
+    s.a = Support(a, dir * ta_xform);
+    s.a = ta_xform * s.a + ta_p;
+
+    s.b = Support(b, (-dir) * tb_xform);
+    s.b = tb_xform * s.b + tb_p;
+
+    s.p = s.a - s.b;
+    return s;
+}
+
+template <typename ShapeA, typename ShapeB>
+INLINE_PROCEDURE Support_Points SupportEx(const ShapeA &a, const ShapeB &b, Vec2 dir, Mat2 ta_xform, Vec2 ta_p, Mat2 tb_xform, Vec2 tb_p, Vec2 a_dp, Vec2 b_dp)
+{
+    Support_Points s;
+
+    s.a = Support(a, dir * ta_xform);
+    s.a = ta_xform * s.a + ta_p;
+
+    s.b = Support(b, (-dir) * tb_xform);
+    s.b = tb_xform * s.b + tb_p;
+
+    if (DotProduct(a_dp, -dir) < 0.0f)
+        s.a += a_dp;
+
+    if (DotProduct(b_dp, dir) < 0.0f)
+        s.b += b_dp;
+
+    s.p = s.a - s.b;
+    return s;
+}
+
 int64_t PointFarthestFromEdge(Vec2 a, Vec2 b, Vec2 *p, uint32_t n);
 
 struct Extreme_Point_Index
@@ -1172,6 +1386,19 @@ struct Minimum_Area_Rect
     float Area;
 };
 Minimum_Area_Rect MinimumAreaRect(Vec2 *pt, uint32_t num_pts);
+
+Rect EnclosingRect(Rect a0, Rect a1);
+Circle EnclosingCircle(Circle c0, Circle c1);
+Rect EnclosingRect(Rect r, Circle c);
+
+Rect RectEnclosingQuad(Vec2 a, Vec2 b, Vec2 c, Vec2 d);
+Rect RectEnclosingRect(Rect mm_rect, Vec2 pos, const Mat2 &xform);
+Rect RectEnclosingCircle(Circle circle);
+Rect RectEnclosingCircle(Circle circle, Vec2 p, Mat2 xform, Vec2 pos);
+Rect RectEnclosingCapsule(Capsule capsule);
+Rect RectEnclosingCapsule(Capsule capsule, Mat2 xform, Vec2 pos);
+Rect RectEnclosingPolygon(Polygon polygon);
+Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos);
 
 //
 //

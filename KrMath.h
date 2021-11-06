@@ -1403,8 +1403,10 @@ Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos);
 Rect TransformRect(Rect a, Mat2 mat, Vec2 t);
 Rect TransformRect(Rect a, float rot, Vec2 t);
 
-//
-//
-//
-
 bool PointInsideRect(Vec2 p, Rect rect);
+bool PointInsideCircle(Vec2 p, Circle c);
+bool PointInsideCapsule(Vec2 p, Capsule c);
+bool PointInsideTriangle(Vec2 p, Vec2 a, Vec2 b, Vec2 c);
+bool OriginInsideTriangle(Vec2 a, Vec2 b, Vec2 c);
+bool PointInsideConvexPolygon(Vec2 p, Vec2 *v, uint64_t n);
+

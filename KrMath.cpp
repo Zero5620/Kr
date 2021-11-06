@@ -2262,35 +2262,103 @@ Rect RectEnclosingPolygon(Polygon polygon, Mat2 xform, Vec2 pos)
     return rect;
 }
 
-Rect TransformRect(Rect a, Mat2 mat, Vec2 t) {
-	Rect b;
-	for (uint32_t i = 0; i < 2; i++) {
-		b.Min.m[i] = b.Max.m[i] = t.m[i];
-		for (uint32_t j = 0; j < 2; j++) {
-			float e = mat.m2[i][j] * a.Min.m[j];
-			float f = mat.m2[i][j] * a.Max.m[j];
-			if (e < f) {
-				b.Min.m[i] += e;
-				b.Max.m[i] += f;
-			}
-			else {
-				b.Min.m[i] += f;
-				b.Max.m[i] += e;
-			}
-		}
-	}
-	return b;
+Rect TransformRect(Rect a, Mat2 mat, Vec2 t)
+{
+    Rect b;
+    for (uint32_t i = 0; i < 2; i++)
+    {
+        b.Min.m[i] = b.Max.m[i] = t.m[i];
+        for (uint32_t j = 0; j < 2; j++)
+        {
+            float e = mat.m2[i][j] * a.Min.m[j];
+            float f = mat.m2[i][j] * a.Max.m[j];
+            if (e < f)
+            {
+                b.Min.m[i] += e;
+                b.Max.m[i] += f;
+            }
+            else
+            {
+                b.Min.m[i] += f;
+                b.Max.m[i] += e;
+            }
+        }
+    }
+    return b;
 }
 
-Rect TransformRect(Rect a, float rot, Vec2 t) {
-	return TransformRect(a, RotationMat2(rot), t);
+Rect TransformRect(Rect a, float rot, Vec2 t)
+{
+    return TransformRect(a, RotationMat2(rot), t);
 }
-
-//
-//
-//
 
 bool PointInsideRect(Vec2 p, Rect rect)
 {
     return p.x >= rect.Min.x && p.x <= rect.Max.x && p.y >= rect.Min.y && p.y <= rect.Max.y;
+}
+
+bool PointInsideCircle(Vec2 p, Circle c)
+{
+    Vec2 d = c.Center - p;
+    float dist2 = DotProduct(d, d);
+    return dist2 < c.Radius * c.Radius;
+}
+
+bool PointInsideCapsule(Vec2 p, Capsule c)
+{
+    float dst2 = PointToSegmentLengthSq(p, c.Center[0], c.Center[1]);
+    return dst2 <= c.Radius * c.Radius;
+}
+
+bool PointInsideTriangle(Vec2 p, Vec2 a, Vec2 b, Vec2 c)
+{
+    a -= p;
+    b -= p;
+    c -= p;
+
+    float u = Determinant(b, c);
+    float v = Determinant(c, a);
+    if ((u * v) < 0.0f)
+        return false;
+
+    float w = Determinant(a, b);
+    if ((u * w) < 0.0f)
+        return false;
+
+    return true;
+}
+
+bool OriginInsideTriangle(Vec2 a, Vec2 b, Vec2 c)
+{
+    float u = Determinant(b, c);
+    float v = Determinant(c, a);
+    if ((u * v) < 0.0f)
+        return false;
+
+    float w = Determinant(a, b);
+    if ((u * w) < 0.0f)
+        return false;
+
+    return true;
+}
+
+bool PointInsideConvexPolygon(Vec2 p, Vec2 *v, uint64_t n)
+{
+    // Do binary search over polygon vertices to find the fan triangle
+    // (v[0], v[low], v[high]) the pos32 p lies within the near sides of
+    uint64_t low = 0, high = n;
+    do
+    {
+        uint64_t mid = (low + high) / 2;
+        if (IsTriangleClockwise(v[0], v[mid], p))
+            low = mid;
+        else
+            high = mid;
+    } while (low + 1 < high);
+    // If pos32 outside last (or first) edge, then it is not inside the n-gon
+    if (low == 0 || high == n)
+        return 0;
+    // p is inside the polygon if it is left of
+    // the directed edge from v[low] to v[high]
+    return IsTriangleClockwise(v[low], v[high], p);
 }

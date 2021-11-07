@@ -196,6 +196,11 @@ INLINE_PROCEDURE char *StrNullTerminated(char *buffer, String str)
     return buffer;
 }
 
+INLINE_PROCEDURE char *StrNullTerminatedArena(Memory_Arena *arena, String str)
+{
+    return StrNullTerminated((char *)PushSize(arena, str.Length + 1), str);
+}
+
 INLINE_PROCEDURE Int64 StrFind(String str, String key, Int64 pos)
 {
     Int64 index = Clamp(0, str.Length - 1, pos);

@@ -118,16 +118,16 @@ static bool IsNumberSeparator(Uint8 code, uint32_t index)
 
 static void TokenizerStartToken(Tokenizer *tokenizer)
 {
-    tokenizer->CurrentToken.Row = tokenizer->Row;
-    tokenizer->CurrentToken.Column = tokenizer->Column;
-    tokenizer->CurrentToken.Content.Data = tokenizer->Content.Data + tokenizer->Position - sizeof(tokenizer->Lookup);
+    tokenizer->TokenBuffer.Row = tokenizer->Row;
+    tokenizer->TokenBuffer.Column = tokenizer->Column;
+    tokenizer->TokenBuffer.Content.Data = tokenizer->Content.Data + tokenizer->Position - sizeof(tokenizer->Lookup);
 }
 
 static void TokenizerEndToken(Tokenizer *tokenizer, Token_Kind kind)
 {
-    tokenizer->CurrentToken.Kind = kind;
+    tokenizer->TokenBuffer.Kind = kind;
     Uint8 *end = tokenizer->Content.Data + tokenizer->Position - ArrayCount(tokenizer->Lookup);
-    tokenizer->CurrentToken.Content.Length = (Int64)(end - tokenizer->CurrentToken.Content.Data);
+    tokenizer->TokenBuffer.Content.Length = (Int64)(end - tokenizer->TokenBuffer.Content.Data);
 }
 
 static void TokenizerError(Tokenizer *tokenizer, bool finish, const char *fmt, ...)
@@ -165,6 +165,10 @@ static void TokenizerAdvance(Tokenizer *tokenizer, uint32_t count)
                 }
                 else
                 {
+                    // We update Tokenizer.Position past Tokenizer.Content.Length because
+                    // in TokenizerEndToken procedure, ArrayCount(Tokenizer.Lookup) is subtracted
+                    // and in order for the Length of the content of the last token to be correct,
+                    // Tokenizer.Position needs to get updated past Tokenizer.Content.Length
                     tokenizer->Position += 1;
                 }
             }
@@ -355,32 +359,12 @@ bool TokenizerAdvanceNumber(Tokenizer *tokenizer, char *buffer, uint32_t *buffer
 
 static bool TokenizerGotToken(Tokenizer *tokenizer)
 {
-    return tokenizer->CurrentToken.Kind != Token_Kind_Error;
+    return tokenizer->TokenBuffer.Kind != Token_Kind_Error;
 }
 
-void TokenizerInit(Tokenizer *tokenizer, String content, Uint8 comment_id, bool tokenize_comment)
+static void TokenizerNext(Tokenizer *tokenizer)
 {
-    tokenizer->Content = content;
-    tokenizer->Position = 0;
-    tokenizer->Lookup[0] = 0;
-    tokenizer->Lookup[1] = 0;
-    tokenizer->Lookup[2] = 0;
-
-    tokenizer->CurrentToken.Kind = Token_Kind_Error;
-    tokenizer->Buffer[0] = 0;
-    tokenizer->CommentIdentifier = comment_id;
-    tokenizer->TokenizeComment = tokenize_comment;
-    tokenizer->Finished = false;
-
-    TokenizerAdvance(tokenizer, 3);
-
-    tokenizer->Row = 1;
-    tokenizer->Column = 1;
-}
-
-void TokenizerNext(Tokenizer *tokenizer)
-{
-    tokenizer->CurrentToken.Kind = Token_Kind_Error;
+    tokenizer->TokenBuffer.Kind = Token_Kind_Error;
 
     while (!tokenizer->Finished)
     {
@@ -710,8 +694,8 @@ void TokenizerNext(Tokenizer *tokenizer)
                 {
                     Token_Kind kind = a == '"' ? Token_Kind_Double_Quoted_String : Token_Kind_Single_Quoted_String;
                     TokenizerEndToken(tokenizer, kind);
-                    tokenizer->CurrentToken.Value.String.Data = tokenizer->CurrentToken.Content.Data + 1;
-                    tokenizer->CurrentToken.Value.String.Length = tokenizer->CurrentToken.Content.Length - 2;
+                    tokenizer->TokenBuffer.Value.String.Data = tokenizer->TokenBuffer.Content.Data + 1;
+                    tokenizer->TokenBuffer.Value.String.Length = tokenizer->TokenBuffer.Content.Length - 2;
                 }
                 else
                 {
@@ -863,18 +847,18 @@ void TokenizerNext(Tokenizer *tokenizer)
                         if (sign == 1)
                         {
                             TokenizerEndToken(tokenizer, Token_Kind_Unsigned_Integer_Literal);
-                            tokenizer->CurrentToken.Value.UnsignedInteger = strtoull(buffer + 2, NULL, (int)radix);
+                            tokenizer->TokenBuffer.Value.UnsignedInteger = strtoull(buffer + 2, NULL, (int)radix);
                         }
                         else
                         {
                             TokenizerEndToken(tokenizer, Token_Kind_Signed_Integer_Literal);
-                            tokenizer->CurrentToken.Value.SignedInteger = -1 * strtoll(buffer + 2, NULL, (int)radix);
+                            tokenizer->TokenBuffer.Value.SignedInteger = -1 * strtoll(buffer + 2, NULL, (int)radix);
                         }
                     }
                     else
                     {
                         TokenizerEndToken(tokenizer, Token_Kind_Real_Literal);
-                        tokenizer->CurrentToken.Value.Real = strtod(buffer, NULL);
+                        tokenizer->TokenBuffer.Value.Real = strtod(buffer, NULL);
                     }
 
                     if (errno == ERANGE)
@@ -912,4 +896,38 @@ void TokenizerNext(Tokenizer *tokenizer)
 
     TokenizerStartToken(tokenizer);
     TokenizerEndToken(tokenizer, Token_Kind_End_Of_Stream);
+}
+
+void TokenizerInit(Tokenizer *tokenizer, String content, Uint8 comment_id, bool tokenize_comment)
+{
+    tokenizer->Content = content;
+    tokenizer->Position = 0;
+    tokenizer->Lookup[0] = 0;
+    tokenizer->Lookup[1] = 0;
+    tokenizer->Lookup[2] = 0;
+
+    tokenizer->TokenBuffer.Kind = Token_Kind_Error;
+    tokenizer->Buffer[0] = 0;
+    tokenizer->CommentIdentifier = comment_id;
+    tokenizer->TokenizeComment = tokenize_comment;
+    tokenizer->Finished = false;
+
+    TokenizerAdvance(tokenizer, 3);
+
+    tokenizer->Row = 1;
+    tokenizer->Column = 1;
+
+    TokenizerNext(tokenizer);
+}
+
+Token TokenizerNextToken(Tokenizer *tokenizer)
+{
+    Token token = tokenizer->TokenBuffer;
+    TokenizerNext(tokenizer);
+    return token;
+}
+
+Token TokenizerPeekToken(Tokenizer *tokenizer)
+{
+    return tokenizer->TokenBuffer;
 }

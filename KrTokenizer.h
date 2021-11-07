@@ -104,7 +104,7 @@ struct Tokenizer
     Ptrsize Column;
     Uint8 Lookup[3];
 
-    Token CurrentToken;
+    Token TokenBuffer;
     Uint8 Buffer[256];
     Uint8 CommentIdentifier;
     bool TokenizeComment;
@@ -112,12 +112,6 @@ struct Tokenizer
 };
 
 void TokenizerInit(Tokenizer *tokenizer, String content, Uint8 comment_id = 0, bool tokenize_comment = false);
-void TokenizerNext(Tokenizer *tokenizer);
-
-INLINE_PROCEDURE Token *TokenizerGetToken(Tokenizer *tokenizer)
-{
-    TokenizerNext(tokenizer);
-    return &tokenizer->CurrentToken;
-}
-
+Token TokenizerNextToken(Tokenizer *tokenizer);
+Token TokenizerPeekToken(Tokenizer *tokenizer);
 const char *TokenizerErrorMessage(Tokenizer *tokenizer) { return (char *)tokenizer->Buffer; }

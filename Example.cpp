@@ -38,13 +38,13 @@ int main()
 
     while (true)
     {
-        Token *token = TokenizerGetToken(&tokenizer);
-        if (token->Kind != Token_Kind_Error)
-            PrintToken(token);
+        Token token = TokenizerNextToken(&tokenizer);
+        if (token.Kind != Token_Kind_Error)
+            PrintToken(&token);
         else
-            printf("%3zu:%3zu :: Error: %s\n", token->Row, token->Column, TokenizerErrorMessage(&tokenizer));
+            printf("%3zu:%3zu :: Error: %s\n", token.Row, token.Column, TokenizerErrorMessage(&tokenizer));
 
-        if (token->Kind == Token_Kind_End_Of_Stream)
+        if (token.Kind == Token_Kind_End_Of_Stream)
             break;
     }
 

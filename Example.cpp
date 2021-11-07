@@ -4,16 +4,49 @@
 #include "KrTokenizer.h"
 
 #include <stdio.h>
+#include <stdlib.h>
+
+String ReadEntireFile(const char *file)
+{
+    FILE *f = fopen(file, "rb");
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    Uint8 *string = (Uint8 *)malloc(fsize + 1);
+    fread(string, 1, fsize, f);
+    fclose(f);
+
+    string[fsize] = 0;
+    return String(string, (Int64)fsize);
+}
+
+void PrintToken(Token *token)
+{
+    const String token_str = TokenKindString(token->Kind);
+    printf("%3zu:%3zu :: %-20s %.*s\n", token->Row, token->Column,
+           token_str.Data, (int)token->Content.Length, token->Content.Data);
+}
 
 int main()
 {
     InitThreadContextCrt(MegaBytes(64));
 
-    Vec3 a = V3(5, 4, 2);
-    Vec3 b = V3(4, 5, 6);
-    Vec3 c = a + b;
+    String content = ReadEntireFile("Example.cpp");
+    Tokenizer tokenizer;
+    TokenizerInit(&tokenizer, content);
 
-    printf("a: " FmtV3 " + b: " FmtV3 " = c:" FmtV3 "\n", ExpandV3(a), ExpandV3(b), ExpandV3(c));
+    while (true)
+    {
+        Token *token = TokenizerGetToken(&tokenizer);
+        if (token->Kind != Token_Kind_Error)
+            PrintToken(token);
+        else
+            printf("%3zu:%3zu :: Error: %s\n", token->Row, token->Column, TokenizerErrorMessage(&tokenizer));
+
+        if (token->Kind == Token_Kind_End_Of_Stream)
+            break;
+    }
 
     return 0;
 }

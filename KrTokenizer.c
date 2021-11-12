@@ -11,73 +11,74 @@
 String TokenKindString(Token_Kind kind)
 {
     static const String TokenStrings[] = {
-        "error",
+        StringExpand("error"),
 
-        "comment",
-        "at",
-        "hash",
-        "dollar",
-        "open_bracket",
-        "close_bracket",
-        "slash",
-        "open_curly_bracket",
-        "close_curly_bracket",
-        "open_square_bracket",
-        "close_square_bracket",
-        "colon",
-        "semicolon",
-        "comma",
-        "period",
-        "question_mark",
-        "tilde",
-        "back_tick",
+        StringExpand("comment"),
+        StringExpand("at"),
+        StringExpand("hash"),
+        StringExpand("dollar"),
+        StringExpand("open_bracket"),
+        StringExpand("close_bracket"),
+        StringExpand("slash"),
+        StringExpand("open_curly_bracket"),
+        StringExpand("close_curly_bracket"),
+        StringExpand("open_square_bracket"),
+        StringExpand("close_square_bracket"),
+        StringExpand("colon"),
+        StringExpand("semicolon"),
+        StringExpand("comma"),
+        StringExpand("period"),
+        StringExpand("question_mark"),
+        StringExpand("tilde"),
+        StringExpand("back_tick"),
 
-        "exclamation",
-        "percent",
-        "caret",
-        "ampersand",
-        "astrick",
-        "plus",
-        "minus",
-        "equals",
-        "pipe",
-        "back_slash",
-        "less_than",
-        "greater_than",
+        StringExpand("exclamation"),
+        StringExpand("percent"),
+        StringExpand("caret"),
+        StringExpand("ampersand"),
+        StringExpand("astrick"),
+        StringExpand("plus"),
+        StringExpand("minus"),
+        StringExpand("equals"),
+        StringExpand("pipe"),
+        StringExpand("back_slash"),
+        StringExpand("less_than"),
+        StringExpand("greater_than"),
 
-        "compare_equals",
-        "compare_not_equals",
-        "compare_less_than_equals",
-        "compare_greater_than_equals",
-        "logical_and",
-        "logical_or",
-        "left_shift",
-        "right_shit",
-        "plus_plus",
-        "minus_minus",
-        "plus_equals",
-        "minus_equals",
-        "mul_equals",
-        "div_equals",
-        "mod_equals",
-        "and_equals",
-        "or_equals",
-        "xor_equals",
-        "dash_arrow",
-        "equal_arrow",
-        "double_colon",
+        StringExpand("compare_equals"),
+        StringExpand("compare_not_equals"),
+        StringExpand("compare_less_than_equals"),
+        StringExpand("compare_greater_than_equals"),
+        StringExpand("logical_and"),
+        StringExpand("logical_or"),
+        StringExpand("left_shift"),
+        StringExpand("right_shit"),
+        StringExpand("plus_plus"),
+        StringExpand("minus_minus"),
+        StringExpand("plus_equals"),
+        StringExpand("minus_equals"),
+        StringExpand("mul_equals"),
+        StringExpand("div_equals"),
+        StringExpand("mod_equals"),
+        StringExpand("and_equals"),
+        StringExpand("or_equals"),
+        StringExpand("xor_equals"),
+        StringExpand("dash_arrow"),
+        StringExpand("equal_arrow"),
+        StringExpand("double_colon"),
 
-        "double_quoted_string",
-        "single_quoted_string",
+        StringExpand("double_quoted_string"),
+        StringExpand("single_quoted_string"),
 
-        "real_literal",
-        "signed_integer_literal",
-        "unsigned_integer_literal",
+        StringExpand("real_literal"),
+        StringExpand("signed_integer_literal"),
+        StringExpand("unsigned_integer_literal"),
 
-        "identifier",
+        StringExpand("identifier"),
 
-        "end_of_stream"};
-    static_assert(ArrayCount(TokenStrings) == _Token_Kind_Count, "Strings out of data");
+        StringExpand("end_of_stream") };
+
+    Assert(ArrayCount(TokenStrings) == _Token_Kind_Count); // Strings out of data
     return TokenStrings[kind];
 }
 
@@ -152,7 +153,7 @@ static void TokenizerAdvance(Tokenizer *tokenizer, uint32_t count)
 
             if (tokenizer->Position < tokenizer->Content.Length)
             {
-                tokenizer->Lookup[2] = tokenizer->Content[tokenizer->Position];
+                tokenizer->Lookup[2] = tokenizer->Content.Data[tokenizer->Position];
                 tokenizer->Position += 1;
             }
             else
@@ -290,12 +291,21 @@ static bool TokenizerAdvanceComments(Tokenizer *tokenizer)
     return false;
 }
 
-template <typename IsNumberFunc>
-static bool TokenizerAdvanceNumber(Tokenizer *tokenizer, char *buffer, uint32_t *buffer_index, const uint32_t MaxBufferSize, uint32_t separator_index, IsNumberFunc is_number)
+static bool TokenizerAdvanceNonDecimalNumber(Tokenizer *tokenizer, char *buffer, uint32_t *buffer_index, const uint32_t MaxBufferSize, uint32_t separator_index, uint32_t radix, bool upper)
 {
     while (true)
     {
-        if (is_number(tokenizer->Lookup[0]))
+        bool valid_digit = false;
+
+        if (radix == 2)
+            valid_digit = IsBinaryNumber(tokenizer->Lookup[0]);
+        else 
+        {
+            Assert(radix == 16);
+            valid_digit = upper ? IsHexNumberUpper(tokenizer->Lookup[0]) : IsHexNumberLower(tokenizer->Lookup[0]);
+        }
+
+        if (valid_digit)
         {
             if (*buffer_index < MaxBufferSize)
             {
@@ -343,17 +353,17 @@ bool TokenizerAdvanceNumber(Tokenizer *tokenizer, char *buffer, uint32_t *buffer
     {
         if (buffer[1] == 'x')
         {
-            return TokenizerAdvanceNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, IsHexNumberLower);
+            return TokenizerAdvanceNonDecimalNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, 16, false);
         }
         else
         {
-            return TokenizerAdvanceNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, IsHexNumberUpper);
+            return TokenizerAdvanceNonDecimalNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, 16, true);
         }
     }
     else
     {
         Assert(radix == 2);
-        return TokenizerAdvanceNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, IsBinaryNumber);
+        return TokenizerAdvanceNonDecimalNumber(tokenizer, buffer, buffer_index, MaxBufferSize, separator_index, 2, false);
     }
 }
 
@@ -377,9 +387,9 @@ static void TokenizerNext(Tokenizer *tokenizer)
 
         TokenizerStartToken(tokenizer);
 
-        auto a = tokenizer->Lookup[0];
-        auto b = tokenizer->Lookup[1];
-        auto c = tokenizer->Lookup[2];
+        Uint8 a = tokenizer->Lookup[0];
+        Uint8 b = tokenizer->Lookup[1];
+        Uint8 c = tokenizer->Lookup[2];
 
         if (a <= 125)
         {
@@ -706,7 +716,7 @@ static void TokenizerNext(Tokenizer *tokenizer)
             }
             else if (IsNumber(a) || a == '.' || a == '+' || a == '-')
             {
-                static_assert(sizeof(Tokenizer::Buffer) > 2, "Buffer of at least size 2 is required");
+                Assert(sizeof(tokenizer->Buffer) > 2); // Buffer of at least size 2 is required
 
                 uint32_t MaxBufferSize = sizeof(tokenizer->Buffer) - 1; // -1 for null terminator
                 char *buffer = (char *)tokenizer->Buffer;
@@ -837,7 +847,7 @@ static void TokenizerNext(Tokenizer *tokenizer)
                         return;
                 }
 
-                auto ch = tokenizer->Lookup[0];
+                Uint8 ch = tokenizer->Lookup[0];
                 if ((IsWhitespace(ch) || ch == '\r' || ch == '\n') || !IsValidIdentifierCharacater(ch))
                 {
                     buffer[buffer_index] = 0;

@@ -404,14 +404,14 @@ typedef struct String
 #define StringLiteral(lit)            \
     (const String)                    \
     {                                 \
-        (Int64)(sizeof(lit) - 1), lit \
+        (Int64)(sizeof(lit) - 1), (Uint8 *)lit \
     }
 #if defined(__cplusplus)
 #define StringMake(ch, len) String((Uint8 *)ch, len)
 #else
 #define StringExpand(lit)             \
     {                                 \
-        (Int64)(sizeof(lit) - 1), lit \
+        (Int64)(sizeof(lit) - 1), (Uint8 *)lit \
     }
 #define StringMake(ch, len)         \
     (String)                        \

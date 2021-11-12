@@ -1,4 +1,5 @@
 #pragma once
+
 #include "KrBase.h"
 
 enum Token_Kind
@@ -72,6 +73,7 @@ enum Token_Kind
 
     _Token_Kind_Count
 };
+typedef enum Token_Kind Token_Kind; 
 
 String TokenKindString(Token_Kind kind);
 
@@ -86,6 +88,7 @@ union Token_Value
         Uint8 *Data;
     } String;
 };
+typedef union Token_Value Token_Value;
 
 struct Token
 {
@@ -95,6 +98,7 @@ struct Token
     Ptrsize Column;
     Token_Value Value;
 };
+typedef struct Token Token;
 
 struct Tokenizer
 {
@@ -110,8 +114,9 @@ struct Tokenizer
     bool TokenizeComment;
     bool Finished;
 };
+typedef struct Tokenizer Tokenizer;
 
-void TokenizerInit(Tokenizer *tokenizer, String content, Uint8 comment_id = 0, bool tokenize_comment = false);
+void TokenizerInit(Tokenizer *tokenizer, String content, Uint8 comment_id, bool tokenize_comment);
 Token TokenizerNextToken(Tokenizer *tokenizer);
 Token TokenizerPeekToken(Tokenizer *tokenizer);
 const char *TokenizerErrorMessage(Tokenizer *tokenizer) { return (char *)tokenizer->Buffer; }

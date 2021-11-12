@@ -1,6 +1,5 @@
 #include "KrBase.h"
 #include "KrBaseCRT.h"
-#include "KrMath.h"
 #include "KrTokenizer.h"
 
 #include <stdio.h>
@@ -18,7 +17,7 @@ String ReadEntireFile(const char *file)
     fclose(f);
 
     string[fsize] = 0;
-    return String(string, (Int64)fsize);
+    return StringMake(string, (Int64)fsize);
 }
 
 void PrintToken(Token *token)
@@ -32,9 +31,9 @@ int main()
 {
     InitThreadContextCrt(MegaBytes(64));
 
-    String content = ReadEntireFile("Example.cpp");
+    String content = ReadEntireFile("Example.c");
     Tokenizer tokenizer;
-    TokenizerInit(&tokenizer, content);
+    TokenizerInit(&tokenizer, content, 0, 0);
 
     while (true)
     {
@@ -53,5 +52,4 @@ int main()
 
 #include "KrBase.c"
 #include "KrBaseCRT.c"
-#include "KrMath.cpp"
-#include "KrTokenizer.cpp"
+#include "KrTokenizer.c"

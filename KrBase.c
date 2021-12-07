@@ -304,7 +304,7 @@ extern "C"
 
     void *VirtualMemoryAllocate(void *ptr, Ptrsize size)
     {
-        return VirtualAlloc(ptr, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        return VirtualAlloc(ptr, size, MEM_RESERVE, PAGE_READWRITE);
     }
 
     bool VirtualMemoryCommit(void *ptr, Ptrsize size)

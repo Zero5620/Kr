@@ -63,8 +63,11 @@ extern "C"
 
     void *PushSizeAligned(Memory_Arena *arena, Ptrsize size, Uint32 alignment)
     {
-        Ptrsize alloc_size = AlignSize(arena->CurrentPos, alignment) - arena->CurrentPos + size;
-        return PushSize(arena, size);
+        Ptrsize aligned_current_pos = AlignSize(arena->CurrentPos, alignment);
+        Ptrsize alloc_size          = aligned_current_pos - arena->CurrentPos + size;
+        if (PushSize(arena, alloc_size))
+            return arena->Memory + aligned_current_pos;
+        return 0;
     }
 
     void SetAllocationPosition(Memory_Arena *arena, Ptrsize pos)

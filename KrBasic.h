@@ -1,250 +1,193 @@
 #pragma once
-#include "KrBase.h"
+#include "KrCommon.h"
 
 #include <string.h>
 
-template <typename T> struct Array_View
-{
-    Int64 Count;
-    T    *Data;
+#define ForEach(c) for (auto it = IterBegin(&(c)); IterEnd(&(c), it); IterNext(&it)) 
+#define ForEachTag(name, c) for (auto name = IterBegin(&(c)); IterEnd(&(c), name); IterNext(&name)) 
 
-    inline Array_View() : Count(0), Data(nullptr)
-    {
-    }
-    inline Array_View(T *p, Int64 n) : Count(n), Data(p)
-    {
-    }
-    template <Int64 _Count> constexpr Array_View(const T (&a)[_Count]) : Count(_Count), Data((T *)a)
-    {
-    }
-    inline T &operator[](Int64 index) const
-    {
-        Assert(index < Count);
-        return Data[index];
-    }
-    inline T *begin()
-    {
-        return Data;
-    }
-    inline T *end()
-    {
-        return Data + Count;
-    }
-    inline const T *begin() const
-    {
-        return Data;
-    }
-    inline const T *end() const
-    {
-        return Data + Count;
-    }
+template <typename T> 
+struct Array_View {
+	int64_t count;
+	T *data;
+
+	inline Array_View() : count(0), data(nullptr) {}
+	inline Array_View(T *p, int64_t n) : count(n), data(p) {}
+	template <int64_t _Count> constexpr Array_View(const T(&a)[_Count]) : count(_Count), data((T *)a) {}
+	inline T &operator[](int64_t index) const { Assert(index < count); return data[index]; }
+	inline T *begin() { return data; }
+	inline T *end() { return data + count; }
+	inline const T *begin() const { return data; }
+	inline const T *end() const { return data + count; }
+	T &First() { Assert(count); return data[0]; }
+	const T &First() const { Assert(count); return data[0]; }
+	T &Last() { Assert(count); return data[count - 1]; }
+	const T &Last() const { Assert(count); return data[count - 1]; }
 };
 
-template <typename T> struct Array
-{
-    Int64            Count;
-    T               *Data;
+template <typename T>
+struct Array {
+	int64_t          count;
+	T *data;
 
-    Int64            Capacity;
-    Memory_Allocator Allocator;
+	int64_t          allocated;
+	Memory_Allocator allocator;
 
-    inline Array() : Count(0), Data(nullptr), Capacity(0), Allocator(ThreadContext.Allocator)
-    {
-    }
-    inline Array(Memory_Allocator allocator) : Count(0), Data(0), Capacity(0), Allocator(allocator)
-    {
-    }
+	inline Array() : count(0), data(nullptr), allocated(0), allocator(ThreadContext.allocator) {}
+	inline Array(Memory_Allocator _allocator) : count(0), data(0), allocated(0), allocator(_allocator) {}
+	inline operator Array_View<T>() { return Array_View<T>(data, count); }
+	inline operator const Array_View<T>() const { return Array_View<T>(data, count); }
+	inline T &operator[](int64_t i) { Assert(i >= 0 && i < count); return data[i]; }
+	inline const T &operator[](int64_t i) const { Assert(i >= 0 && i < count); return data[i]; }
+	inline T *begin() { return data; }
+	inline T *end() { return data + count; }
+	inline const T *begin() const { return data; }
+	inline const T *end() const { return data + count; }
+	T &First() { Assert(count); return data[0]; }
+	const T &First() const { Assert(count); return data[0]; }
+	T &Last() { Assert(count); return data[count - 1]; }
+	const T &Last() const { Assert(count); return data[count - 1]; }
 
-    inline operator Array_View<T>()
-    {
-        return Array_View<T>(Data, Count);
-    }
-    inline operator const Array_View<T>() const
-    {
-        return Array_View<T>(Data, Count);
-    }
+	inline int64_t GetGrowCapacity(int64_t size) const {
+		int64_t new_capacity = allocated ? (allocated + allocated / 2) : 8;
+		return new_capacity > size ? new_capacity : size;
+	}
 
-    inline T &operator[](Int64 i)
-    {
-        Assert(i >= 0 && i < Count);
-        return Data[i];
-    }
-    inline const T &operator[](Int64 i) const
-    {
-        Assert(i >= 0 && i < Count);
-        return Data[i];
-    }
+	inline void Reserve(int64_t new_capacity) {
+		if (new_capacity <= allocated)
+			return;
+		T *new_data = (T *)MemoryReallocate(allocated * sizeof(T), new_capacity * sizeof(T), data, allocator);
+		if (new_data) {
+			data = new_data;
+			allocated = new_capacity;
+		}
+	}
 
-    inline T *begin()
-    {
-        return Data;
-    }
-    inline T *end()
-    {
-        return Data + Count;
-    }
-    inline const T *begin() const
-    {
-        return Data;
-    }
-    inline const T *end() const
-    {
-        return Data + Count;
-    }
+	inline void Resize(int64_t new_count) {
+		Reserve(new_count);
+		count = new_count;
+	}
 
-    inline Int64 GetGrowCapacity(Int64 size) const
-    {
-        Int64 new_capacity = Capacity ? (Capacity + Capacity / 2) : 8;
-        return new_capacity > size ? new_capacity : size;
-    }
+	template <typename... Args> void Emplace(const Args &...args) {
+		if (count == allocated) {
+			int64_t n = GetGrowCapacity(allocated + 1);
+			Reserve(n);
+		}
+		data[count] = T(args...);
+		count += 1;
+	}
 
-    inline void Reserve(Int64 new_capacity)
-    {
-        if (new_capacity <= Capacity)
-            return;
-        T *data = (T *)MemoryReallocate(Capacity * sizeof(T), new_capacity * sizeof(T), Data, &Allocator);
-        if (data)
-        {
-            Data     = data;
-            Capacity = new_capacity;
-        }
-    }
+	T *Add() {
+		if (count == allocated) {
+			int64_t c = GetGrowCapacity(allocated + 1);
+			Reserve(c);
+		}
+		count += 1;
+		return data + (count - 1);
+	}
 
-    T *FirstElement()
-    {
-        Assert(Count);
-        return Data;
-    }
+	T *AddN(uint32_t n) {
+		if (count + n > allocated) {
+			int64_t c = GetGrowCapacity(count + n);
+			Reserve(c);
+		}
+		T *ptr = data + count;
+		count += n;
+		return ptr;
+	}
 
-    T *LastElement()
-    {
-        Assert(Count);
-        return Data + Count - 1;
-    }
+	void Add(const T &d) {
+		T *m = Add();
+		*m = d;
+	}
 
-    template <typename... Args> void Emplace(const Args &...args)
-    {
-        if (Count == Capacity)
-        {
-            Int64 n = GetGrowCapacity(Capacity + 1);
-            Reserve(n);
-        }
-        Data[Count] = T(args...);
-        Count += 1;
-    }
+	void Copy(Array_View<T> src) {
+		if (src.count + count >= allocated) {
+			int64_t c = GetGrowCapacity(src.count + count + 1);
+			Reserve(c);
+		}
+		memcpy(data + count, src.data, src.count * sizeof(T));
+		count += src.count;
+	}
 
-    T *Add()
-    {
-        if (Count == Capacity)
-        {
-            Int64 c = GetGrowCapacity(Capacity + 1);
-            Reserve(c);
-        }
-        Count += 1;
-        return Data + (Count - 1);
-    }
+	void RemoveBack() {
+		Assert(count > 0);
+		count -= 1;
+	}
 
-    T *AddN(uint32_t n)
-    {
-        if (Count + n > Capacity)
-        {
-            Int64 c = GetGrowCapacity(Count + n);
-            Reserve(c);
-        }
-        T *ptr = Data + Count;
-        Count += n;
-        return ptr;
-    }
+	void Remove(int64_t index) {
+		Assert(index < count);
+		memmove(data + index, data + index + 1, (count - index - 1) * sizeof(T));
+		count -= 1;
+	}
 
-    void Add(const T &d)
-    {
-        T *m = Add();
-        *m   = d;
-    }
+	void RemoveUnordered(int64_t index) {
+		Assert(index < count);
+		data[index] = data[count - 1];
+		count -= 1;
+	}
 
-    void Copy(Array_View<T> src)
-    {
-        if (src.Count + Count >= Capacity)
-        {
-            Int64 c = GetGrowCapacity(src.Count + Count + 1);
-            Reserve(c);
-        }
-        memcpy(Data + Count, src.Data, src.Count * sizeof(T));
-        Count += src.Count;
-    }
+	void Insert(int64_t index, const T &v) {
+		Assert(index < count + 1);
+		Add();
+		for (int64_t move_index = count - 1; move_index > index; --move_index) {
+			data[move_index] = data[move_index - 1];
+		}
+		data[index] = v;
+	}
 
-    void RemoveBack()
-    {
-        Assert(Count > 0);
-        Count -= 1;
-    }
+	void InsertUnordered(int64_t index, const T &v) {
+		Assert(index < count + 1);
+		Add();
+		data[count - 1] = data[index];
+		data[index] = v;
+	}
 
-    void Remove(Int64 index)
-    {
-        Assert(index < Count);
-        memmove(Data + index, Data + index + 1, (Count - index - 1) * sizeof(T));
-        Count -= 1;
-    }
+	void Pack() {
+		if (count != allocated) {
+			data = (T *)MemoryReallocate(allocated * sizeof(T), count * sizeof(T), data, allocator);
+			allocated = count;
+		}
+	}
 
-    void RemoveUnordered(Int64 index)
-    {
-        Assert(index < Count);
-        Data[index] = Data[Count - 1];
-        Count -= 1;
-    }
-
-    void Insert(Int64 index, const T &v)
-    {
-        Assert(index < Count + 1);
-        Add();
-        for (Int64 move_index = Count - 1; move_index > index; --move_index)
-        {
-            Data[move_index] = Data[move_index - 1];
-        }
-        Data[index] = v;
-    }
-
-    void InsertUnordered(Int64 index, const T &v)
-    {
-        Assert(index < Count + 1);
-        Add();
-        Data[Count - 1] = Data[index];
-        Data[index] = v;
-    }
-
-    Int64 Find(const T &v) const
-    {
-        for (Int64 index = 0; index < Count; ++index)
-        {
-            auto elem = Data + index;
-            if (*elem == v)
-            {
-                return index;
-            }
-        }
-        return -1;
-    }
-
-    template <typename SearchFunc, typename... Args> Int64 Find(SearchFunc func, const Args &...args) const
-    {
-        for (Int64 index = 0; index < Count; ++index)
-        {
-            if (func(Data[index], args...))
-            {
-                return index;
-            }
-        }
-        return -1;
-    }
-
-    void Reset()
-    {
-        Count = 0;
-    }
+	void Reset() {
+		count = 0;
+	}
 };
 
-template <typename T> inline void Free(Array<T> *a)
-{
-    if (a->Data)
-        MemoryFree(a->Data, &a->Allocator);
+template <typename T>
+inline void Free(Array<T> *a) {
+	if (a->data)
+		MemoryFree(a->data, a->allocator);
 }
+
+template <typename T>
+inline void Free(Array_View<T> *a) {
+	if (a->data)
+		MemoryFree(a->data);
+}
+
+template <typename T>
+inline int64_t Find(Array_View<T> arr, const T &v) {
+	for (int64_t index = 0; index < arr.count; ++index) {
+		auto elem = arr.data + index;
+		if (*elem == v) {
+			return index;
+		}
+	}
+	return -1;
+}
+
+template <typename T, typename SearchFunc, typename... Args>
+inline int64_t Find(Array_View<T> arr, SearchFunc func, const Args &...args) {
+	for (int64_t index = 0; index < arr.count; ++index) {
+		if (func(arr[index], args...)) {
+			return index;
+		}
+	}
+	return -1;
+}
+
+//
+//
+//

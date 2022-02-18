@@ -5,6 +5,19 @@
 thread_local Thread_Context ThreadContext;
 static Thread_Context_Params ThreadContextDefaultParams;
 
+bool operator==(const String a, const String b) {
+	if (a.length != b.length)
+		return false;
+	return memcmp(a.data, b.data, a.length) == 0;
+}
+
+bool operator!=(const String a, const String b) {
+	if (a.length != b.length)
+		return true;
+	return memcmp(a.data, b.data, a.length) != 0;
+}
+
+
 uint8_t *AlignPointer(uint8_t *location, size_t alignment) {
 	return (uint8_t *)((size_t)(location + (alignment - 1)) & ~(alignment - 1));
 }

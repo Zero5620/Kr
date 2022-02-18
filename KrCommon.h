@@ -223,6 +223,9 @@ struct String {
 	uint8_t &operator[](const int64_t index) { Assert(index < length); return data[index]; }
 };
 
+bool operator==(const String a, const String b);
+bool operator!=(const String a, const String b);
+
 #define _zConcatInternal(x, y) x##y
 #define _zConcat(x, y) _zConcatInternal(x, y)
 

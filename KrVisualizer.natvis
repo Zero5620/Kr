@@ -25,6 +25,43 @@
 		</Expand>
 	</Type>
 
+	<Type Name="Index_Table">
+		<DisplayString>{{ count={slot_count_pow2 >> TABLE_BUCKET_SHIFT} }}</DisplayString>
+		<Expand>
+			<Item Name="[count]" ExcludeView="simple">slot_count_pow2 >> TABLE_BUCKET_SHIFT</Item>
+			<ArrayItems>
+				<Size>slot_count_pow2 >> TABLE_BUCKET_SHIFT</Size>
+				<ValuePointer>buckets</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="Table&lt;*&gt;">
+		<DisplayString>{{ count={storage.count} }}</DisplayString>
+		<Expand>
+			<Item Name="[index]" ExcludeView="simple">index</Item>
+			<Item Name="[count]" ExcludeView="simple">storage.count</Item>
+			<Item Name="[allocator]" ExcludeView="simple">storage.allocator</Item>
+			<ArrayItems>
+				<Size>storage.count</Size>
+				<ValuePointer>storage.data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<Type Name="STable&lt;*&gt;">
+		<DisplayString>{{ count={storage.count} }}</DisplayString>
+		<Expand>
+			<Item Name="[index]" ExcludeView="simple">index</Item>
+			<Item Name="[count]" ExcludeView="simple">storage.count</Item>
+			<Item Name="[allocator]" ExcludeView="simple">storage.allocator</Item>
+			<ArrayItems>
+				<Size>storage.count</Size>
+				<ValuePointer>storage.data</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
 	<Type Name="String">
 		<Intrinsic Name="length" Expression="length" />
 		<Intrinsic Name="data" Expression="data" />

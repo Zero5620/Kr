@@ -47,7 +47,7 @@ void MemoryArenaDestroy(Memory_Arena *arena) {
 }
 
 void MemoryArenaReset(Memory_Arena *arena) {
-	arena->current = 0;
+	arena->current = sizeof(Memory_Arena);
 }
 
 size_t MemoryArenaSizeLeft(Memory_Arena *arena) {

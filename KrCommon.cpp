@@ -342,7 +342,7 @@ bool VirtualMemoryFree(void *ptr, size_t size) {
 
 #endif
 
-#if PLATFORM_LINUX == 1
+#if PLATFORM_LINUX == 1 || PLATFORM_MAC == 1
 #include <sys/mman.h>
 #include <stdlib.h>
 

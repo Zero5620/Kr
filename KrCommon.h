@@ -221,10 +221,29 @@ struct String {
 	String(const char *_Data, int64_t _Length) : data((uint8_t *)_Data), length(_Length) {}
 	const uint8_t &operator[](const int64_t index) const { Assert(index < length); return data[index]; }
 	uint8_t &operator[](const int64_t index) { Assert(index < length); return data[index]; }
+	inline uint8_t *begin() { return data; }
+	inline uint8_t *end() { return data + length; }
+	inline const uint8_t *begin() const { return data; }
+	inline const uint8_t *end() const { return data + length; }
 };
 
 bool operator==(const String a, const String b);
 bool operator!=(const String a, const String b);
+
+template <typename T>
+struct Array_View {
+	int64_t count;
+	T *data;
+
+	inline Array_View() : count(0), data(nullptr) {}
+	inline Array_View(T *p, int64_t n) : count(n), data(p) {}
+	template <int64_t _Count> constexpr Array_View(const T(&a)[_Count]) : count(_Count), data((T *)a) {}
+	inline T &operator[](int64_t index) const { Assert(index < count); return data[index]; }
+	inline T *begin() { return data; }
+	inline T *end() { return data + count; }
+	inline const T *begin() const { return data; }
+	inline const T *end() const { return data + count; }
+};
 
 #define _zConcatInternal(x, y) x##y
 #define _zConcat(x, y) _zConcatInternal(x, y)
@@ -281,13 +300,14 @@ Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena);
 void EndTemporaryMemory(Temporary_Memory *temp);
 void FreeTemporaryMemory(Temporary_Memory *temp);
 
-
 #ifndef THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS
-#define THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS 2
+#define THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS 1
 #endif // !THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS
 
+constexpr uint32_t ThreadContextScratchpadMaxArena = THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS;
+
 struct Thread_Scratchpad {
-	Memory_Arena *arena[THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS];
+	Memory_Arena *arena[ThreadContextScratchpadMaxArena];
 };
 
 //
@@ -331,6 +351,7 @@ Memory_Allocator NullMemoryAllocator();
 
 struct Thread_Context_Params {
 	Memory_Allocator allocator;
+	uint32_t scratchpad_arena_count;
 };
 
 void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params = nullptr);

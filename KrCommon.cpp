@@ -123,8 +123,12 @@ Memory_Arena *ThreadScratchpad() {
 }
 
 Memory_Arena *ThreadScratchpadI(uint32_t i) {
-	Assert(i < ArrayCount(ThreadContext.scratchpad.arena));
-	return ThreadContext.scratchpad.arena[i];
+	if constexpr (ThreadContextScratchpadMaxArena == 1) {
+		return ThreadContext.scratchpad.arena[0];
+	} else {
+		Assert(i < ArrayCount(ThreadContext.scratchpad.arena));
+		return ThreadContext.scratchpad.arena[i];
+	}
 }
 
 Memory_Arena *ThreadUnusedScratchpad(Memory_Arena **arenas, uint32_t count) {
@@ -227,8 +231,10 @@ void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params) 
 	InitOSContent();
 
 	if (scratchpad_size) {
-		for (auto &thread_arena : ThreadContext.scratchpad.arena) {
-			thread_arena = MemoryArenaCreate(scratchpad_size);
+		uint32_t arena_count = params ? params->scratchpad_arena_count : ThreadContextScratchpadMaxArena;
+		arena_count = Minimum(arena_count, ThreadContextScratchpadMaxArena);
+		for (uint32_t arena_index = 0; arena_index < arena_count; ++arena_index) {
+			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaCreate(scratchpad_size);
 		}
 	} else {
 		memset(&ThreadContext.scratchpad, 0, sizeof(ThreadContext.scratchpad));

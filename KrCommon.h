@@ -208,7 +208,8 @@ inline void Unreachable() { TriggerBreakpoint(); }
 #define KiloBytes(n) ((n)*1024u)
 #define MegaBytes(n) (KiloBytes(n) * 1024u)
 #define GigaBytes(n) (MegaBytes(n) * 1024u)
-#define MEMORY_ARENA_COMMIT_SIZE MegaBytes(64)
+
+constexpr size_t MemoryArenaCommitSize = KiloBytes(64);
 
 struct String {
 	int64_t length;
@@ -272,20 +273,19 @@ struct Exit_Scope_Help {
 uint8_t *AlignPointer(uint8_t *location, size_t alignment);
 size_t AlignSize(size_t location, size_t alignment);
 
-struct Memory_Arena {
-	size_t current;
-	size_t reserved;
-	size_t committed;
-};
+struct Memory_Arena;
 
-Memory_Arena *MemoryArenaCreate(size_t max_size);
+Memory_Arena *MemoryArenaCreate(size_t max_size, size_t commit_size = MemoryArenaCommitSize);
 void MemoryArenaDestroy(Memory_Arena *arena);
 void MemoryArenaReset(Memory_Arena *arena);
-size_t MemoryArenaSizeLeft(Memory_Arena *arena);
+size_t MemoryArenaCapSize(Memory_Arena *arena);
+size_t MemoryArenaUsedSize(Memory_Arena *arena);
+size_t MemoryArenaEmptySize(Memory_Arena *arena);
+bool MemoryArenaReserve(Memory_Arena *arena, size_t pos);
+bool MemoryArenaResize(Memory_Arena *arena, size_t pos);
 
 void *PushSize(Memory_Arena *arena, size_t size);
 void *PushSizeAligned(Memory_Arena *arena, size_t size, uint32_t alignment);
-bool SetAllocationPosition(Memory_Arena *arena, size_t pos);
 
 #define PushType(arena, type) (type *)PushSize(arena, sizeof(type))
 #define PushArray(arena, type, count) (type *)PushSize(arena, sizeof(type) * (count))
@@ -304,10 +304,10 @@ void FreeTemporaryMemory(Temporary_Memory *temp);
 #define THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS 1
 #endif // !THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS
 
-constexpr uint32_t ThreadContextScratchpadMaxArena = THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS;
+constexpr uint32_t MaxThreadContextScratchpadArena = THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS;
 
 struct Thread_Scratchpad {
-	Memory_Arena *arena[ThreadContextScratchpadMaxArena];
+	Memory_Arena *arena[MaxThreadContextScratchpadArena];
 };
 
 //
@@ -359,7 +359,7 @@ void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params =
 
 void *MemoryAllocate(size_t size, Memory_Allocator allocator = ThreadContext.allocator);
 void *MemoryReallocate(size_t old_size, size_t new_size, void *ptr, Memory_Allocator allocator = ThreadContext.allocator);
-void MemoryFree(void *ptr, Memory_Allocator allocator = ThreadContext.allocator);
+void MemoryFree(void *ptr, size_t allocated, Memory_Allocator allocator = ThreadContext.allocator);
 
 void *operator new(size_t size, Memory_Allocator allocator);
 void *operator new[](size_t size, Memory_Allocator allocator);

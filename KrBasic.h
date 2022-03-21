@@ -139,13 +139,7 @@ struct Array {
 template <typename T>
 inline void Free(Array<T> *a) {
 	if (a->data)
-		MemoryFree(a->data, a->allocator);
-}
-
-template <typename T>
-inline void Free(Array_View<T> *a) {
-	if (a->data)
-		MemoryFree(a->data);
+		MemoryFree(a->data, sizeof(T) * a->allocated, a->allocator);
 }
 
 template <typename T>
@@ -179,10 +173,10 @@ uint32_t Murmur3Hash32(const uint8_t *key, size_t len, uint32_t seed);
 //
 //
 
-template <typename Key_Type, typename Value_Type>
+template <typename K, typename V>
 struct Key_Value {
-	Key_Type key;
-	Value_Type value;
+	K key;
+	V value;
 };
 
 constexpr size_t TABLE_BUCKET_SIZE = sizeof(size_t);
@@ -212,19 +206,11 @@ struct Index_Table {
 	Index_Bucket *buckets = nullptr;
 };
 
+void IndexTableFree(Index_Table *table, Memory_Allocator allocator);
 void IndexTableResize(Index_Table *table, size_t slot_count_pow2, Memory_Allocator allocator);
 
 template <typename K, typename V>
-struct Index_Table_Added_Pair {
-	Key_Value<K, V> *pair;
-	bool found;
-};
-
-template <typename K, typename V>
-Index_Table_Added_Pair<K, V> IndexTableAdd(Index_Table *index, size_t hash, K key, Array<Key_Value<K, V>> &storage) {
-	Index_Table_Added_Pair<K, V> result;
-	result.found = true;
-
+ptrdiff_t IndexTableAdd(Index_Table *index, size_t hash, K key, Array_View<Key_Value<K, V>> storage) {
 	auto step = TABLE_BUCKET_SIZE;
 
 	auto pos = hash & (index->slot_count_pow2 - 1);
@@ -240,8 +226,7 @@ Index_Table_Added_Pair<K, V> IndexTableAdd(Index_Table *index, size_t hash, K ke
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
-						result.pair = &storage[si];
-						return result;
+						return si;
 					}
 				}
 			}
@@ -260,8 +245,7 @@ Index_Table_Added_Pair<K, V> IndexTableAdd(Index_Table *index, size_t hash, K ke
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
-						result.pair = &storage[si];
-						return result;
+						return si;
 					}
 				}
 			}
@@ -295,9 +279,7 @@ EmptyFound:
 	bucket->hash[pos & TABLE_BUCKET_MASK] = hash;
 	bucket->index[pos & TABLE_BUCKET_MASK] = si;
 
-	result.pair = storage.Add();
-	result.found = false;
-	return result;
+	return (ptrdiff_t)storage.count;
 }
 
 template <typename K, typename V>
@@ -351,12 +333,10 @@ ptrdiff_t IndexTableFind(Index_Table *index, size_t hash, const K key, Array_Vie
 }
 
 template <typename K, typename V, typename Hash_Method>
-bool IndexTableRemove(Index_Table *index, const K key, Array_View<Key_Value<K, V>> storage) {
+bool IndexTableRemove(Index_Table *index, const Hash_Method &hash_method, const K key, Array_View<Key_Value<K, V>> storage) {
 	if (!index->buckets) return false;
 
-	Hash_Method GetKeyHash;
-
-	auto pos = IndexTableFind<K, V>(index, GetKeyHash(key), key, storage);
+	auto pos = IndexTableFind<K, V>(index, hash_method(key), key, storage);
 	if (pos < 0) return false;
 
 	Assert(pos < (ptrdiff_t)index->slot_count_pow2);
@@ -379,7 +359,7 @@ bool IndexTableRemove(Index_Table *index, const K key, Array_View<Key_Value<K, V
 		storage[old_offset] = storage[last_offset];
 
 		auto ex_key = storage[old_offset].key;
-		auto pos = IndexTableFind<K, V>(index, GetKeyHash(ex_key), ex_key, storage);
+		auto pos = IndexTableFind<K, V>(index, hash_method(ex_key), ex_key, storage);
 		Assert(pos >= 0);
 
 		storage[last_offset] = temp;
@@ -419,14 +399,14 @@ struct Table_Hash_Method<uint64_t> {
 	} 
 };
 
-template <typename Key_Type, typename Value_Type, typename Hash_Method = Table_Hash_Method<Key_Type>>
+template <typename K, typename V, typename Hash_Method = Table_Hash_Method<K>>
 struct Table {
-	using Pair = Key_Value<Key_Type, Value_Type>;
+	using Pair = Key_Value<K, V>;
 
 	Index_Table index;
 	Array<Pair> storage;
 
-	Hash_Method GetKeyHash;
+	Hash_Method hash_method;
 
 	Table() = default;
 	Table(Memory_Allocator allocator) : storage(allocator) {}
@@ -438,8 +418,8 @@ struct Table {
 
 	inline int64_t ElementCount() const { return storage.count; }
 
-	Value_Type *Find(const Key_Type key) {
-		auto pos = IndexTableFind<Key_Type, Value_Type>(&index, GetKeyHash(key), key, storage);
+	V *Find(const K key) {
+		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);
 		if (pos >= 0) {
 			auto bucket = &index.buckets[pos >> TABLE_BUCKET_SHIFT];
 			auto si = bucket->index[pos & TABLE_BUCKET_MASK];
@@ -448,30 +428,34 @@ struct Table {
 		return nullptr;
 	}
 
-	Value_Type *FindOrPut(const Key_Type key) {
+	V *FindOrPut(const K key) {
 		if (index.used_count >= index.used_count_threshold) {
 			auto new_slot_count_pow2 = index.slot_count_pow2 ? index.slot_count_pow2 * 2 : TABLE_BUCKET_SIZE;
 			IndexTableResize(&index, new_slot_count_pow2, storage.allocator);
 		}
 
-		auto hash = GetKeyHash(key);
+		auto hash = hash_method(key);
 
-		auto result = IndexTableAdd<Key_Type, Value_Type>(&index, hash, key, storage);
-		if (!result.found) {
-			result.pair->key = key;
-			result.pair->value = Value_Type{};
+		auto result = IndexTableAdd<K, V>(&index, hash, key, storage);
+
+		if (result < storage.count) {
+			return &storage[result].value;
 		}
 
-		return &result.pair->value;
+		auto pair = storage.Add();
+		pair->key = key;
+		pair->value = V{};
+
+		return &pair->value;
 	}
 
-	void Put(const Key_Type key, const Value_Type &value) {
+	void Put(const K key, const V &value) {
 		auto dst = FindOrPut(key);
 		*dst = value;
 	}
 
-	void Remove(const Key_Type key) {
-		if (IndexTableRemove<Key_Type, Value_Type, Hash_Method>(&index, key, storage)) {
+	void Remove(const K key) {
+		if (IndexTableRemove<K, V, Hash_Method>(&index, hash_method, key, storage)) {
 			storage.count -= 1;
 			if (index.used_count < index.used_count_shrink_threshold && index.slot_count_pow2 > TABLE_BUCKET_SIZE)
 				IndexTableResize(&index, index.slot_count_pow2 >> 2, storage.allocator);
@@ -481,21 +465,21 @@ struct Table {
 	}
 };
 
-template <typename Key_Type, typename Value_Type, typename Hash_Method = Table_Hash_Method<String>>
-inline void Free(Table<Key_Type, Value_Type, Hash_Method> *table) {
-	MemoryFree(table->index.buckets, table->storage.allocator);
+template <typename K, typename V, typename Hash_Method = Table_Hash_Method<String>>
+inline void Free(Table<K, V, Hash_Method> *table) {
+	IndexTableFree(&table->index, table->storage.allocator);
 	Free(&table->storage);
 }
 
-template <typename Value_Type, typename Hash_Method = Table_Hash_Method<String>>
+template <typename V, typename Hash_Method = Table_Hash_Method<String>>
 struct STable {
-	using Key_Type = String;
-	using Pair = Key_Value<Key_Type, Value_Type>;
+	using K = String;
+	using Pair = Key_Value<K, V>;
 
 	Index_Table index;
 	Array<Pair> storage;
 
-	Hash_Method GetKeyHash;
+	Hash_Method hash_method;
 
 	Memory_Allocator string_allocator = ThreadContext.allocator;
 
@@ -510,8 +494,8 @@ struct STable {
 
 	inline int64_t ElementCount() const { return storage.count; }
 
-	Value_Type *Find(const Key_Type key) {
-		auto pos = IndexTableFind<Key_Type, Value_Type>(&index, GetKeyHash(key), key, storage);
+	V *Find(const K key) {
+		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);
 		if (pos >= 0) {
 			auto bucket = &index.buckets[pos >> TABLE_BUCKET_SHIFT];
 			auto si = bucket->index[pos & TABLE_BUCKET_MASK];
@@ -520,37 +504,42 @@ struct STable {
 		return nullptr;
 	}
 
-	Value_Type *FindOrPut(const Key_Type key) {
+	V *FindOrPut(const K key) {
 		if (index.used_count >= index.used_count_threshold) {
 			auto new_slot_count_pow2 = index.slot_count_pow2 ? index.slot_count_pow2 * 2 : TABLE_BUCKET_SIZE;
 			IndexTableResize(&index, new_slot_count_pow2, storage.allocator);
 		}
 
-		auto hash = GetKeyHash(key);
+		auto hash = hash_method(key);
 
-		auto result = IndexTableAdd<Key_Type, Value_Type>(&index, hash, key, storage);
-		if (!result.found) {
-			String key_copy;
-			key_copy.length = key.length;
-			key_copy.data = (uint8_t *)MemoryAllocate(key.length + 1, string_allocator);
-			memcpy(key_copy.data, key.data, key.length);
-			key_copy.data[key.length] = 0;
+		auto result = IndexTableAdd<K, V>(&index, hash, key, storage);
 
-			result.pair->key = key_copy;
-			result.pair->value = Value_Type{};
+		if (result < storage.count) {
+			return &storage[result].value;
 		}
 
-		return &result.pair->value;
+		String key_copy;
+		key_copy.length = key.length;
+		key_copy.data = (uint8_t *)MemoryAllocate(key.length + 1, string_allocator);
+		memcpy(key_copy.data, key.data, key.length);
+		key_copy.data[key.length] = 0;
+
+		auto pair = storage.Add();
+		pair->key = key_copy;
+		pair->value = V{};
+
+		return &pair->value;
 	}
 
-	void Put(const Key_Type key, const Value_Type &value) {
+	void Put(const K key, const V &value) {
 		auto dst = FindOrPut(key);
 		*dst = value;
 	}
 
-	void Remove(const Key_Type key) {
-		if (IndexTableRemove<Key_Type, Value_Type, Hash_Method>(&index, key, storage)) {
-			MemoryFree(storage.Last().key.data, string_allocator);
+	void Remove(const K key) {
+		if (IndexTableRemove<K, V, Hash_Method>(&index, hash_method, key, storage)) {
+			auto last = storage.Last();
+			MemoryFree(last.key.data, last.key.length + 1, string_allocator);
 			storage.count -= 1;
 
 			if (index.used_count < index.used_count_shrink_threshold && index.slot_count_pow2 > TABLE_BUCKET_SIZE)
@@ -561,11 +550,11 @@ struct STable {
 	}
 };
 
-template <typename Value_Type, typename Hash_Method = Table_Hash_Method<String>>
-inline void Free(STable<Value_Type, Hash_Method> *table) {
-	MemoryFree(table->index.buckets, table->storage.allocator);
+template <typename V, typename Hash_Method = Table_Hash_Method<String>>
+inline void Free(STable<V, Hash_Method> *table) {
+	IndexTableFree(&table->index, table->storage.allocator);
 	for (auto &pair : table->storage) {
-		MemoryFree(pair.key.data, table->string_allocator);
+		MemoryFree(pair.key.data, pair.key.length + 1, table->string_allocator);
 	}
 	Free(&table->storage);
 }

@@ -39,6 +39,10 @@ uint32_t Murmur3Hash32(const uint8_t *key, size_t len, uint32_t seed) {
 //
 //
 
+void IndexTableFree(Index_Table *table, Memory_Allocator allocator) {
+	MemoryFree(table->buckets, sizeof(Index_Bucket) * (table->slot_count_pow2 >> TABLE_BUCKET_SHIFT), allocator);
+}
+
 void IndexTableResize(Index_Table *table, size_t slot_count_pow2, Memory_Allocator allocator) {
 	auto count = slot_count_pow2 >> TABLE_BUCKET_SHIFT;
 	Index_Bucket *buckets = new(allocator) Index_Bucket[count];
@@ -91,7 +95,7 @@ void IndexTableResize(Index_Table *table, size_t slot_count_pow2, Memory_Allocat
 			}
 		}
 
-		MemoryFree(table->buckets, allocator);
+		IndexTableFree(table, allocator);
 	}
 
 	table->slot_count_pow2 = slot_count_pow2;

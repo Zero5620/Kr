@@ -212,16 +212,16 @@ inline void Unreachable() { TriggerBreakpoint(); }
 constexpr size_t MemoryArenaCommitSize = KiloBytes(64);
 
 struct String {
-	int64_t length;
-	uint8_t *data;
+	ptrdiff_t length;
+	uint8_t * data;
 
 	String() : data(0), length(0) {}
-	template <int64_t _Length>
+	template <ptrdiff_t _Length>
 	constexpr String(const char(&a)[_Length]) : data((uint8_t *)a), length(_Length - 1) {}
-	String(const uint8_t *_Data, int64_t _Length) : data((uint8_t *)_Data), length(_Length) {}
-	String(const char *_Data, int64_t _Length) : data((uint8_t *)_Data), length(_Length) {}
-	const uint8_t &operator[](const int64_t index) const { Assert(index < length); return data[index]; }
-	uint8_t &operator[](const int64_t index) { Assert(index < length); return data[index]; }
+	String(const uint8_t *_Data, ptrdiff_t _Length) : data((uint8_t *)_Data), length(_Length) {}
+	String(const char *_Data, ptrdiff_t _Length) : data((uint8_t *)_Data), length(_Length) {}
+	const uint8_t &operator[](const ptrdiff_t index) const { Assert(index < length); return data[index]; }
+	uint8_t &operator[](const ptrdiff_t index) { Assert(index < length); return data[index]; }
 	inline uint8_t *begin() { return data; }
 	inline uint8_t *end() { return data + length; }
 	inline const uint8_t *begin() const { return data; }
@@ -233,12 +233,12 @@ bool operator!=(const String a, const String b);
 
 template <typename T>
 struct Array_View {
-	int64_t count;
+	ptrdiff_t count;
 	T *data;
 
 	inline Array_View() : count(0), data(nullptr) {}
-	inline Array_View(T *p, int64_t n) : count(n), data(p) {}
-	template <int64_t _Count> constexpr Array_View(const T(&a)[_Count]) : count(_Count), data((T *)a) {}
+	inline Array_View(T *p, ptrdiff_t n) : count(n), data(p) {}
+	template <ptrdiff_t _Count> constexpr Array_View(const T(&a)[_Count]) : count(_Count), data((T *)a) {}
 	inline T &operator[](int64_t index) const { Assert(index < count); return data[index]; }
 	inline T *begin() { return data; }
 	inline T *end() { return data + count; }
@@ -275,8 +275,8 @@ size_t AlignSize(size_t location, size_t alignment);
 
 struct Memory_Arena;
 
-Memory_Arena *MemoryArenaCreate(size_t max_size, size_t commit_size = MemoryArenaCommitSize);
-void MemoryArenaDestroy(Memory_Arena *arena);
+Memory_Arena *MemoryArenaAllocate(size_t max_size, size_t commit_size = MemoryArenaCommitSize);
+void MemoryArenaFree(Memory_Arena *arena);
 void MemoryArenaReset(Memory_Arena *arena);
 size_t MemoryArenaCapSize(Memory_Arena *arena);
 size_t MemoryArenaUsedSize(Memory_Arena *arena);
@@ -284,12 +284,20 @@ size_t MemoryArenaEmptySize(Memory_Arena *arena);
 bool MemoryArenaReserve(Memory_Arena *arena, size_t pos);
 bool MemoryArenaResize(Memory_Arena *arena, size_t pos);
 
+#define MemoryZeroSize(mem, size) memset(mem, 0, size)
+#define MemoryZero(var) MemoryZeroSize(&var, sizeof(var))
+
 void *PushSize(Memory_Arena *arena, size_t size);
 void *PushSizeAligned(Memory_Arena *arena, size_t size, uint32_t alignment);
+void *PushSizeZero(Memory_Arena *arena, size_t size);
+void *PushSizeAlignedZero(Memory_Arena *arena, size_t size, uint32_t alignment);
 
 #define PushType(arena, type) (type *)PushSize(arena, sizeof(type))
 #define PushArray(arena, type, count) (type *)PushSize(arena, sizeof(type) * (count))
 #define PushArrayAligned(arena, type, count, alignment) (type *)PushSizeAligned(arena, sizeof(type) * (count), alignment)
+#define PushTypeZero(arena, type) (type *)PushSizeZero(arena, sizeof(type))
+#define PushArrayZero(arena, type, count) (type *)PushSizeZero(arena, sizeof(type) * (count))
+#define PushArrayAlignedZero(arena, type, count, alignment) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count), alignment)
 
 typedef struct Temporary_Memory {
 	Memory_Arena *arena;

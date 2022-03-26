@@ -8,18 +8,18 @@
 
 template <typename T>
 struct Array {
-	int64_t          count;
+	ptrdiff_t          count;
 	T *data;
 
-	int64_t          allocated;
+	ptrdiff_t          allocated;
 	Memory_Allocator allocator;
 
 	inline Array() : count(0), data(nullptr), allocated(0), allocator(ThreadContext.allocator) {}
 	inline Array(Memory_Allocator _allocator) : count(0), data(0), allocated(0), allocator(_allocator) {}
 	inline operator Array_View<T>() { return Array_View<T>(data, count); }
 	inline operator const Array_View<T>() const { return Array_View<T>(data, count); }
-	inline T &operator[](int64_t i) { Assert(i >= 0 && i < count); return data[i]; }
-	inline const T &operator[](int64_t i) const { Assert(i >= 0 && i < count); return data[i]; }
+	inline T &operator[](ptrdiff_t i) { Assert(i >= 0 && i < count); return data[i]; }
+	inline const T &operator[](ptrdiff_t i) const { Assert(i >= 0 && i < count); return data[i]; }
 	inline T *begin() { return data; }
 	inline T *end() { return data + count; }
 	inline const T *begin() const { return data; }
@@ -29,12 +29,12 @@ struct Array {
 	T &Last() { Assert(count); return data[count - 1]; }
 	const T &Last() const { Assert(count); return data[count - 1]; }
 
-	inline int64_t GetGrowCapacity(int64_t size) const {
-		int64_t new_capacity = allocated ? (allocated + allocated / 2) : 8;
+	inline ptrdiff_t GetGrowCapacity(ptrdiff_t size) const {
+		ptrdiff_t new_capacity = allocated ? (allocated + allocated / 2) : 8;
 		return new_capacity > size ? new_capacity : size;
 	}
 
-	inline void Reserve(int64_t new_capacity) {
+	inline void Reserve(ptrdiff_t new_capacity) {
 		if (new_capacity <= allocated)
 			return;
 		T *new_data = (T *)MemoryReallocate(allocated * sizeof(T), new_capacity * sizeof(T), data, allocator);
@@ -44,14 +44,14 @@ struct Array {
 		}
 	}
 
-	inline void Resize(int64_t new_count) {
+	inline void Resize(ptrdiff_t new_count) {
 		Reserve(new_count);
 		count = new_count;
 	}
 
 	template <typename... Args> void Emplace(const Args &...args) {
 		if (count == allocated) {
-			int64_t n = GetGrowCapacity(allocated + 1);
+			ptrdiff_t n = GetGrowCapacity(allocated + 1);
 			Reserve(n);
 		}
 		data[count] = T(args...);
@@ -60,7 +60,7 @@ struct Array {
 
 	T *Add() {
 		if (count == allocated) {
-			int64_t c = GetGrowCapacity(allocated + 1);
+			ptrdiff_t c = GetGrowCapacity(allocated + 1);
 			Reserve(c);
 		}
 		count += 1;
@@ -69,7 +69,7 @@ struct Array {
 
 	T *AddN(uint32_t n) {
 		if (count + n > allocated) {
-			int64_t c = GetGrowCapacity(count + n);
+			ptrdiff_t c = GetGrowCapacity(count + n);
 			Reserve(c);
 		}
 		T *ptr = data + count;
@@ -84,7 +84,7 @@ struct Array {
 
 	void Copy(Array_View<T> src) {
 		if (src.count + count >= allocated) {
-			int64_t c = GetGrowCapacity(src.count + count + 1);
+			ptrdiff_t c = GetGrowCapacity(src.count + count + 1);
 			Reserve(c);
 		}
 		memcpy(data + count, src.data, src.count * sizeof(T));
@@ -96,28 +96,28 @@ struct Array {
 		count -= 1;
 	}
 
-	void Remove(int64_t index) {
+	void Remove(ptrdiff_t index) {
 		Assert(index < count);
 		memmove(data + index, data + index + 1, (count - index - 1) * sizeof(T));
 		count -= 1;
 	}
 
-	void RemoveUnordered(int64_t index) {
+	void RemoveUnordered(ptrdiff_t index) {
 		Assert(index < count);
 		data[index] = data[count - 1];
 		count -= 1;
 	}
 
-	void Insert(int64_t index, const T &v) {
+	void Insert(ptrdiff_t index, const T &v) {
 		Assert(index < count + 1);
 		Add();
-		for (int64_t move_index = count - 1; move_index > index; --move_index) {
+		for (ptrdiff_t move_index = count - 1; move_index > index; --move_index) {
 			data[move_index] = data[move_index - 1];
 		}
 		data[index] = v;
 	}
 
-	void InsertUnordered(int64_t index, const T &v) {
+	void InsertUnordered(ptrdiff_t index, const T &v) {
 		Assert(index < count + 1);
 		Add();
 		data[count - 1] = data[index];
@@ -143,8 +143,8 @@ inline void Free(Array<T> *a) {
 }
 
 template <typename T>
-inline int64_t Find(Array_View<T> arr, const T &v) {
-	for (int64_t index = 0; index < arr.count; ++index) {
+inline ptrdiff_t Find(Array_View<T> arr, const T &v) {
+	for (ptrdiff_t index = 0; index < arr.count; ++index) {
 		auto elem = arr.data + index;
 		if (*elem == v) {
 			return index;
@@ -154,8 +154,8 @@ inline int64_t Find(Array_View<T> arr, const T &v) {
 }
 
 template <typename T, typename SearchFunc, typename... Args>
-inline int64_t Find(Array_View<T> arr, SearchFunc func, const Args &...args) {
-	for (int64_t index = 0; index < arr.count; ++index) {
+inline ptrdiff_t Find(Array_View<T> arr, SearchFunc func, const Args &...args) {
+	for (ptrdiff_t index = 0; index < arr.count; ++index) {
 		if (func(arr[index], args...)) {
 			return index;
 		}
@@ -387,8 +387,8 @@ template <> struct Table_Hash_Method<String> {
 		return Murmur3Hash32(v.data, v.length, 0x31415926); 
 	} 
 };
-template <> struct Table_Hash_Method<int64_t> { 
-	size_t operator()(const int64_t v) const { 
+template <> struct Table_Hash_Method<ptrdiff_t> { 
+	size_t operator()(const ptrdiff_t v) const { 
 		return (uint32_t)v; 
 	} 
 };
@@ -416,7 +416,7 @@ struct Table {
 	inline const Pair *begin() const { return storage.begin(); }
 	inline const Pair *end() const { return storage.end(); }
 
-	inline int64_t ElementCount() const { return storage.count; }
+	inline ptrdiff_t ElementCount() const { return storage.count; }
 
 	V *Find(const K key) {
 		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);
@@ -492,7 +492,7 @@ struct STable {
 	inline const Pair *begin() const { return storage.begin(); }
 	inline const Pair *end() const { return storage.end(); }
 
-	inline int64_t ElementCount() const { return storage.count; }
+	inline ptrdiff_t ElementCount() const { return storage.count; }
 
 	V *Find(const K key) {
 		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);

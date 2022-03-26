@@ -151,6 +151,14 @@ union Quat {
 #define MathCopySign(x, y) copysignf(x, y)
 #define MathMod(x, y) fmodf(x, y)
 #define MathSquare(x) ((x) * (x))
+#define MathFloor(x) floorf(x)
+
+INLINE_PROCEDURE float WrapFloat(float min, float a, float max) {
+	float range = max - min;
+	float offset = a - min;
+	float result = (offset - (MathFloor(offset / range) * range) + min);
+	return result;
+}
 
 INLINE_PROCEDURE Vec2 Arm(float angle) {
 	return Vec2(MathCos(angle), MathSin(angle));
@@ -738,13 +746,13 @@ Vec4      UintColorToVec4(UintColor c);
 Vec3      UintColorToVec3(UintColor c);
 
 struct Rect {
-	Vec2 Min;
-	Vec2 Max;
+	Vec2 min;
+	Vec2 max;
 
 	Rect() {
 	}
-	Rect(Vec2 min, Vec2 max) : Min(min), Max(max) {
+	Rect(Vec2 _min, Vec2 _max) : min(_min), max(_max) {
 	}
-	Rect(float min_x, float min_y, float max_x, float max_y) : Min(min_x, min_y), Max(max_x, max_y) {
+	Rect(float min_x, float min_y, float max_x, float max_y) : min(min_x, min_y), max(max_x, max_y) {
 	}
 };

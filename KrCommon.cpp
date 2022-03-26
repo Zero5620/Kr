@@ -32,7 +32,7 @@ size_t AlignSize(size_t location, size_t alignment) {
 	return ((location + (alignment - 1)) & ~(alignment - 1));
 }
 
-Memory_Arena *MemoryArenaCreate(size_t max_size, size_t initial_size) {
+Memory_Arena *MemoryArenaAllocate(size_t max_size, size_t initial_size) {
 	max_size = AlignPower2Up(max_size, 64 * 1024);
 	uint8_t *mem = (uint8_t *)VirtualMemoryAllocate(0, max_size);
 	if (mem) {
@@ -50,7 +50,7 @@ Memory_Arena *MemoryArenaCreate(size_t max_size, size_t initial_size) {
 	return nullptr;
 }
 
-void MemoryArenaDestroy(Memory_Arena *arena) {
+void MemoryArenaFree(Memory_Arena *arena) {
 	VirtualMemoryFree(arena, arena->reserved);
 }
 
@@ -140,6 +140,18 @@ Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena) {
 	mem.arena = arena;
 	mem.position = arena->current;
 	return mem;
+}
+
+void *PushSizeZero(Memory_Arena *arena, size_t size) {
+	void *result = PushSize(arena, size);
+	MemoryZeroSize(result, size);
+	return result;
+}
+
+void *PushSizeAlignedZero(Memory_Arena *arena, size_t size, uint32_t alignment) {
+	void *result = PushSizeAligned(arena, size, alignment);
+	MemoryZeroSize(result, size);
+	return result;
 }
 
 void EndTemporaryMemory(Temporary_Memory *temp) {
@@ -275,7 +287,7 @@ void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params) 
 		uint32_t arena_count = params ? params->scratchpad_arena_count : MaxThreadContextScratchpadArena;
 		arena_count = Minimum(arena_count, MaxThreadContextScratchpadArena);
 		for (uint32_t arena_index = 0; arena_index < arena_count; ++arena_index) {
-			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaCreate(scratchpad_size);
+			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaAllocate(scratchpad_size);
 		}
 	} else {
 		memset(&ThreadContext.scratchpad, 0, sizeof(ThreadContext.scratchpad));

@@ -9,7 +9,6 @@ constexpr float TAU = PI / 2;
 constexpr float REAL_EPSILON = FLT_EPSILON;
 constexpr float REAL_MAX = FLT_MAX;
 constexpr float REAL_MIN = FLT_MIN;
-constexpr float REAL_INFINITY = INFINITY;
 
 union Vec2 {
 	struct {
@@ -586,12 +585,10 @@ Mat4        RotationZ(float angle);
 Mat4        RotationMat4(float x, float y, float z, float angle);
 Mat4        RotationMat4(Vec3 axis, float angle);
 Mat4        LookAt(Vec3 from, Vec3 to, Vec3 world_up);
-Mat4        OrthographicProjectionLH(float l, float r, float t, float b, float n, float f);
 Mat4        OrthographicProjectionRH(float l, float r, float t, float b, float n, float f);
-Mat4        PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f);
+Mat4        OrthographicProjectionLH(float l, float r, float t, float b, float n, float f);
 Mat4        PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f);
-Mat4        OrthographicProjectionExRangeRH(float l, float r, float t, float b, float n, float f);
-Mat4        PerspectiveProjectionExRangeRH(float fov, float aspect_ratio, float n, float f);
+Mat4        PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f);
 Vec3        GetRight(const Mat4 &m);
 Vec3        GetUp(const Mat4 &m);
 Vec3        GetForward(const Mat4 &m);
@@ -677,6 +674,22 @@ template <typename Type> Type BezierCubic(Type a, Type b, Type c, Type d, float 
 	float w3 = 3 * mt * t * t;
 	float w4 = t * t * t;
 	return w1 * a + w2 * b + w3 * c + w4 * d;
+}
+
+template <typename Type> void BuildBezierQuadratic(Type a, Type b, Type c, Type *points, int segments) {
+	for (int seg_index = 0; seg_index <= segments; ++seg_index) {
+		float t = (float)seg_index / (float)segments;
+		auto  np = BezierQuadratic(a, b, c, t);
+		points[seg_index] = np;
+	}
+}
+
+template <typename Type> void BuildBezierCubic(Type a, Type b, Type c, Type d, Type *points, int segments) {
+	for (int seg_index = 0; seg_index <= segments; ++seg_index) {
+		float t = (float)seg_index / (float)segments;
+		auto  np = BezierCubic(a, b, c, d, t);
+		points[seg_index] = np;
+	}
 }
 
 template <typename Type> Type Slerp(Type from, Type to, float angle, float t) {

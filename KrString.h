@@ -90,7 +90,7 @@ INLINE_PROCEDURE String StrDuplicateArena(String src, Memory_Arena *arena) {
 
 INLINE_PROCEDURE String SubStr(String str, ptrdiff_t index, ptrdiff_t count) {
 	Assert(index < str.length);
-	count = (ptrdiff_t)Minimum(str.length, count);
+	count = (ptrdiff_t)Minimum(str.length - index, count);
 	return String(str.data + index, count);
 }
 

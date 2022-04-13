@@ -451,6 +451,19 @@ Mat4 LookAtDirection(Vec3 dir, Vec3 world_up) {
 	return lookat;
 }
 
+Mat4 OrthographicProjectionRH(float l, float r, float t, float b, float n, float f) {
+	float iwidth = 1 / (r - l);
+	float iheight = 1 / (t - b);
+	float range = 1 / (n - f);
+
+	Mat4  m;
+	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
+	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
+	m.rows[2] = Vec4(0.0f, 0.0f, range, -n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
 Mat4 OrthographicProjectionLH(float l, float r, float t, float b, float n, float f) {
 	float iwidth = 1 / (r - l);
 	float iheight = 1 / (t - b);
@@ -464,68 +477,29 @@ Mat4 OrthographicProjectionLH(float l, float r, float t, float b, float n, float
 	return m;
 }
 
-Mat4 OrthographicProjectionRH(float l, float r, float t, float b, float n, float f) {
-	float iwidth = 1 / (r - l);
-	float iheight = 1 / (t - b);
-	float range = 1 / (f - n);
+Mat4 PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f) {
+	float height = 1.0f / MathTan(fov * 0.5f);
+	float width = height / aspect_ratio;
+	float range = 1 / (n - f);
 
 	Mat4  m;
-	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
-	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
-	m.rows[2] = Vec4(0.0f, 0.0f, range, n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
+	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
+	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, -1.0f, 0.0f);
 	return m;
 }
 
 Mat4 PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f) {
 	float height = 1.0f / MathTan(fov * 0.5f);
 	float width = height / aspect_ratio;
-	float range = f / (f - n);
+	float range = 1 / (f - n);
 
 	Mat4  m;
 	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
 	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, range, -range * n);
+	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
 	m.rows[3] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	return m;
-}
-
-Mat4 PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f) {
-	float height = 1.0f / MathTan(fov * 0.5f);
-	float width = height / aspect_ratio;
-	float range = f / (f - n);
-
-	Mat4  m;
-	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, range, range * n);
-	m.rows[3] = Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-	return m;
-}
-
-Mat4 OrthographicProjectionExRangeRH(float l, float r, float t, float b, float n, float f) {
-	float iwidth = 1 / (r - l);
-	float iheight = 1 / (t - b);
-	float range = 1 / (f - n);
-
-	Mat4  m;
-	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
-	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
-	m.rows[2] = Vec4(0.0f, 0.0f, -2 * range, -(f + n) * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 PerspectiveProjectionExRangeRH(float fov, float aspect_ratio, float n, float f) {
-	float height = 1.0f / MathTan(fov * 0.5f);
-	float width = height / aspect_ratio;
-	float range = 1 / (f - n);
-
-	Mat4  m;
-	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, -(f + n) * range, -2.0f * f * n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, -1.0f, 0.0f);
 	return m;
 }
 

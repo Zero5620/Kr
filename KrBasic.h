@@ -3,16 +3,13 @@
 
 #include <string.h>
 
-#define ForEach(c) for (auto it = IterBegin(&(c)); IterEnd(&(c), it); IterNext(&it)) 
-#define ForEachTag(name, c) for (auto name = IterBegin(&(c)); IterEnd(&(c), name); IterNext(&name)) 
-
 template <typename T>
 struct Array {
 	ptrdiff_t          count;
-	T *data;
+	T *                data;
 
 	ptrdiff_t          allocated;
-	Memory_Allocator allocator;
+	Memory_Allocator   allocator;
 
 	inline Array() : count(0), data(nullptr), allocated(0), allocator(ThreadContext.allocator) {}
 	inline Array(Memory_Allocator _allocator) : count(0), data(0), allocated(0), allocator(_allocator) {}
@@ -185,15 +182,18 @@ constexpr size_t TABLE_BUCKET_MASK = TABLE_BUCKET_SIZE - 1;
 
 static_assert(TABLE_BUCKET_SIZE == 8 || TABLE_BUCKET_SIZE == 4);
 
-struct Index_Bucket {
-	int8_t flags[TABLE_BUCKET_SIZE] = {};
-	size_t hash[TABLE_BUCKET_SIZE] = {};
-	ptrdiff_t index[TABLE_BUCKET_SIZE] = {};
+
+enum Index_Bucket_Flag : int8_t {
+	INDEX_BUCKET_EMPTY,
+	INDEX_BUCKET_DELETED,
+	INDEX_BUCKET_PRESENT
 };
 
-constexpr size_t TABLE_BUCKET_FLAG_EMPTY = 0;
-constexpr size_t TABLE_BUCKET_FLAG_DELETED = 1;
-constexpr size_t TABLE_BUCKET_FLAG_PRESENT = 2;
+struct Index_Bucket {
+	Index_Bucket_Flag flags[TABLE_BUCKET_SIZE] = {};
+	size_t            hash[TABLE_BUCKET_SIZE]  = {};
+	ptrdiff_t         index[TABLE_BUCKET_SIZE] = {};
+};
 
 struct Index_Table {
 	size_t slot_count_pow2 = 0;
@@ -207,11 +207,13 @@ struct Index_Table {
 };
 
 void IndexTableFree(Index_Table *table, Memory_Allocator allocator);
-void IndexTableResize(Index_Table *table, size_t slot_count_pow2, Memory_Allocator allocator);
+void IndexTableAllocate(Index_Table *table, size_t slot_count_pow2, Memory_Allocator allocator);
 
-template <typename K, typename V>
-ptrdiff_t IndexTableAdd(Index_Table *index, size_t hash, K key, Array_View<Key_Value<K, V>> storage) {
+template <typename K, typename V, typename Hash_Method>
+ptrdiff_t IndexTableAdd(Index_Table *index, const Hash_Method &hash_method, K key, Array_View<Key_Value<K, V>> storage) {
 	auto step = TABLE_BUCKET_SIZE;
+
+	auto hash = hash_method(key);
 
 	auto pos = hash & (index->slot_count_pow2 - 1);
 
@@ -222,38 +224,34 @@ ptrdiff_t IndexTableAdd(Index_Table *index, size_t hash, K key, Array_View<Key_V
 		auto bucket = &index->buckets[bucket_index];
 
 		for (auto iter = pos & TABLE_BUCKET_MASK; iter < TABLE_BUCKET_SIZE; ++iter) {
-			if (bucket->flags[iter] == TABLE_BUCKET_FLAG_PRESENT) {
+			if (bucket->flags[iter] == INDEX_BUCKET_PRESENT) {
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
 						return si;
 					}
 				}
-			}
-			else if (bucket->flags[iter] == TABLE_BUCKET_FLAG_EMPTY) {
+			} else if (bucket->flags[iter] == INDEX_BUCKET_EMPTY) {
 				pos = (pos & ~TABLE_BUCKET_MASK) + iter;
 				goto EmptyFound;
-			}
-			else if (tombstone < 0) {
+			} else if (tombstone < 0) {
 				tombstone = (pos & ~TABLE_BUCKET_MASK) + iter;
 			}
 		}
 
 		auto limit = pos & TABLE_BUCKET_MASK;
 		for (auto iter = 0; iter < limit; ++iter) {
-			if (bucket->flags[iter] == TABLE_BUCKET_FLAG_PRESENT) {
+			if (bucket->flags[iter] == INDEX_BUCKET_PRESENT) {
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
 						return si;
 					}
 				}
-			}
-			else if (bucket->flags[iter] == TABLE_BUCKET_FLAG_EMPTY) {
+			} else if (bucket->flags[iter] == INDEX_BUCKET_EMPTY) {
 				pos = (pos & ~TABLE_BUCKET_MASK) + iter;
 				goto EmptyFound;
-			}
-			else if (tombstone < 0) {
+			} else if (tombstone < 0) {
 				tombstone = (pos & ~TABLE_BUCKET_MASK) + iter;
 			}
 		}
@@ -275,16 +273,19 @@ EmptyFound:
 
 	auto si = (ptrdiff_t)storage.count;
 
-	bucket->flags[pos & TABLE_BUCKET_MASK] = TABLE_BUCKET_FLAG_PRESENT;
+	bucket->flags[pos & TABLE_BUCKET_MASK] = INDEX_BUCKET_PRESENT;
 	bucket->hash[pos & TABLE_BUCKET_MASK] = hash;
 	bucket->index[pos & TABLE_BUCKET_MASK] = si;
 
 	return (ptrdiff_t)storage.count;
 }
 
-template <typename K, typename V>
-ptrdiff_t IndexTableFind(Index_Table *index, size_t hash, const K key, Array_View<Key_Value<K, V>> storage) {
+
+template <typename K, typename V, typename Hash_Method>
+ptrdiff_t IndexTableFind(Index_Table *index, Hash_Method &hash_method, const K key, Array_View<Key_Value<K, V>> storage) {
 	if (index->used_count == 0) return -1;
+
+	auto hash = hash_method(key);
 
 	auto step = TABLE_BUCKET_SIZE;
 
@@ -295,30 +296,28 @@ ptrdiff_t IndexTableFind(Index_Table *index, size_t hash, const K key, Array_Vie
 		auto bucket = &index->buckets[bucket_index];
 
 		for (auto iter = pos & TABLE_BUCKET_MASK; iter < TABLE_BUCKET_SIZE; ++iter) {
-			if (bucket->flags[iter] == TABLE_BUCKET_FLAG_PRESENT) {
+			if (bucket->flags[iter] == INDEX_BUCKET_PRESENT) {
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
 						return (pos & ~TABLE_BUCKET_MASK) + iter;
 					}
 				}
-			}
-			else if (bucket->flags[iter] == TABLE_BUCKET_FLAG_EMPTY) {
+			} else if (bucket->flags[iter] == INDEX_BUCKET_EMPTY) {
 				return -1;
 			}
 		}
 
 		auto limit = pos & TABLE_BUCKET_MASK;
 		for (auto iter = 0; iter < limit; ++iter) {
-			if (bucket->flags[iter] == TABLE_BUCKET_FLAG_PRESENT) {
+			if (bucket->flags[iter] == INDEX_BUCKET_PRESENT) {
 				if (bucket->hash[iter] == hash) {
 					auto si = bucket->index[iter];
 					if (storage[si].key == key) {
 						return (pos & ~TABLE_BUCKET_MASK) + iter;
 					}
 				}
-			}
-			else if (bucket->flags[iter] == TABLE_BUCKET_FLAG_EMPTY) {
+			} else if (bucket->flags[iter] == INDEX_BUCKET_EMPTY) {
 				return -1;
 			}
 		}
@@ -333,10 +332,10 @@ ptrdiff_t IndexTableFind(Index_Table *index, size_t hash, const K key, Array_Vie
 }
 
 template <typename K, typename V, typename Hash_Method>
-bool IndexTableRemove(Index_Table *index, const Hash_Method &hash_method, const K key, Array_View<Key_Value<K, V>> storage) {
+bool IndexTableRemove(Index_Table *index, Hash_Method &hash_method, const K key, Array_View<Key_Value<K, V>> storage) {
 	if (!index->buckets) return false;
 
-	auto pos = IndexTableFind<K, V>(index, hash_method(key), key, storage);
+	auto pos = IndexTableFind<K, V>(index, hash_method, key, storage);
 	if (pos < 0) return false;
 
 	Assert(pos < (ptrdiff_t)index->slot_count_pow2);
@@ -347,7 +346,7 @@ bool IndexTableRemove(Index_Table *index, const Hash_Method &hash_method, const 
 	ptrdiff_t old_offset = bucket->index[iter];
 	ptrdiff_t last_offset = (ptrdiff_t)storage.count - 1;
 
-	bucket->flags[iter] = TABLE_BUCKET_FLAG_DELETED;
+	bucket->flags[iter] = INDEX_BUCKET_DELETED;
 	bucket->hash[iter] = 0;
 	bucket->index[iter] = -1;
 
@@ -359,7 +358,7 @@ bool IndexTableRemove(Index_Table *index, const Hash_Method &hash_method, const 
 		storage[old_offset] = storage[last_offset];
 
 		auto ex_key = storage[old_offset].key;
-		auto pos = IndexTableFind<K, V>(index, hash_method(ex_key), ex_key, storage);
+		auto pos = IndexTableFind<K, V>(index, hash_method, ex_key, storage);
 		Assert(pos >= 0);
 
 		storage[last_offset] = temp;
@@ -419,7 +418,7 @@ struct Table {
 	inline ptrdiff_t ElementCount() const { return storage.count; }
 
 	V *Find(const K key) {
-		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);
+		auto pos = IndexTableFind<K, V>(&index, hash_method, key, storage);
 		if (pos >= 0) {
 			auto bucket = &index.buckets[pos >> TABLE_BUCKET_SHIFT];
 			auto si = bucket->index[pos & TABLE_BUCKET_MASK];
@@ -431,12 +430,10 @@ struct Table {
 	V *FindOrPut(const K key) {
 		if (index.used_count >= index.used_count_threshold) {
 			auto new_slot_count_pow2 = index.slot_count_pow2 ? index.slot_count_pow2 * 2 : TABLE_BUCKET_SIZE;
-			IndexTableResize(&index, new_slot_count_pow2, storage.allocator);
+			IndexTableAllocate(&index, new_slot_count_pow2, storage.allocator);
 		}
 
-		auto hash = hash_method(key);
-
-		auto result = IndexTableAdd<K, V>(&index, hash, key, storage);
+		auto result = IndexTableAdd<K, V>(&index, hash_method, key, storage);
 
 		if (result < storage.count) {
 			return &storage[result].value;
@@ -458,9 +455,9 @@ struct Table {
 		if (IndexTableRemove<K, V, Hash_Method>(&index, hash_method, key, storage)) {
 			storage.count -= 1;
 			if (index.used_count < index.used_count_shrink_threshold && index.slot_count_pow2 > TABLE_BUCKET_SIZE)
-				IndexTableResize(&index, index.slot_count_pow2 >> 2, storage.allocator);
+				IndexTableAllocate(&index, index.slot_count_pow2 >> 2, storage.allocator);
 			else if (index.tombstone_count > index.tombstone_count_threshold)
-				IndexTableResize(&index, index.slot_count_pow2, storage.allocator);
+				IndexTableAllocate(&index, index.slot_count_pow2, storage.allocator);
 		}
 	}
 };
@@ -495,7 +492,7 @@ struct STable {
 	inline ptrdiff_t ElementCount() const { return storage.count; }
 
 	V *Find(const K key) {
-		auto pos = IndexTableFind<K, V>(&index, hash_method(key), key, storage);
+		auto pos = IndexTableFind<K, V>(&index, hash_method, key, storage);
 		if (pos >= 0) {
 			auto bucket = &index.buckets[pos >> TABLE_BUCKET_SHIFT];
 			auto si = bucket->index[pos & TABLE_BUCKET_MASK];
@@ -507,12 +504,10 @@ struct STable {
 	V *FindOrPut(const K key) {
 		if (index.used_count >= index.used_count_threshold) {
 			auto new_slot_count_pow2 = index.slot_count_pow2 ? index.slot_count_pow2 * 2 : TABLE_BUCKET_SIZE;
-			IndexTableResize(&index, new_slot_count_pow2, storage.allocator);
+			IndexTableAllocate(&index, new_slot_count_pow2, storage.allocator);
 		}
 
-		auto hash = hash_method(key);
-
-		auto result = IndexTableAdd<K, V>(&index, hash, key, storage);
+		auto result = IndexTableAdd<K, V>(&index, hash_method, key, storage);
 
 		if (result < storage.count) {
 			return &storage[result].value;
@@ -543,9 +538,9 @@ struct STable {
 			storage.count -= 1;
 
 			if (index.used_count < index.used_count_shrink_threshold && index.slot_count_pow2 > TABLE_BUCKET_SIZE)
-				IndexTableResize(&index, index.slot_count_pow2 >> 2, storage.allocator);
+				IndexTableAllocate(&index, index.slot_count_pow2 >> 2, storage.allocator);
 			else if (index.tombstone_count > index.tombstone_count_threshold)
-				IndexTableResize(&index, index.slot_count_pow2, storage.allocator);
+				IndexTableAllocate(&index, index.slot_count_pow2, storage.allocator);
 		}
 	}
 };

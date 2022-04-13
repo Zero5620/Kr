@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #if defined(__clang__) || defined(__ibmxl__)
 #define COMPILER_CLANG 1
@@ -209,6 +210,8 @@ inline void Unreachable() { TriggerBreakpoint(); }
 #define MegaBytes(n) (KiloBytes(n) * 1024u)
 #define GigaBytes(n) (MegaBytes(n) * 1024u)
 
+typedef uint32_t boolx;
+
 constexpr size_t MemoryArenaCommitSize = KiloBytes(64);
 
 struct String {
@@ -271,7 +274,6 @@ struct Exit_Scope_Help {
 //
 
 uint8_t *AlignPointer(uint8_t *location, size_t alignment);
-size_t AlignSize(size_t location, size_t alignment);
 
 struct Memory_Arena;
 
@@ -281,7 +283,9 @@ void MemoryArenaReset(Memory_Arena *arena);
 size_t MemoryArenaCapSize(Memory_Arena *arena);
 size_t MemoryArenaUsedSize(Memory_Arena *arena);
 size_t MemoryArenaEmptySize(Memory_Arena *arena);
-bool MemoryArenaReserve(Memory_Arena *arena, size_t pos);
+
+bool MemoryArenaEnsureCommit(Memory_Arena *arena, size_t pos);
+bool MemoryArenaEnsurePos(Memory_Arena *arena, size_t pos);
 bool MemoryArenaResize(Memory_Arena *arena, size_t pos);
 
 #define MemoryZeroSize(mem, size) memset(mem, 0, size)
@@ -292,11 +296,11 @@ void *PushSizeAligned(Memory_Arena *arena, size_t size, uint32_t alignment);
 void *PushSizeZero(Memory_Arena *arena, size_t size);
 void *PushSizeAlignedZero(Memory_Arena *arena, size_t size, uint32_t alignment);
 
-#define PushType(arena, type) (type *)PushSize(arena, sizeof(type))
-#define PushArray(arena, type, count) (type *)PushSize(arena, sizeof(type) * (count))
+#define PushType(arena, type) (type *)PushSizeAligned(arena, sizeof(type), alignof(type))
+#define PushTypeZero(arena, type) (type *)PushSizeAlignedZero(arena, sizeof(type), alignof(type))
+#define PushArray(arena, type, count) (type *)PushSizeAligned(arena, sizeof(type) * (count), alignof(type))
+#define PushArrayZero(arena, type, count) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count). alignof(type))
 #define PushArrayAligned(arena, type, count, alignment) (type *)PushSizeAligned(arena, sizeof(type) * (count), alignment)
-#define PushTypeZero(arena, type) (type *)PushSizeZero(arena, sizeof(type))
-#define PushArrayZero(arena, type, count) (type *)PushSizeZero(arena, sizeof(type) * (count))
 #define PushArrayAlignedZero(arena, type, count, alignment) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count), alignment)
 
 typedef struct Temporary_Memory {
@@ -327,8 +331,22 @@ typedef void *(*Memory_Allocator_Proc)(Allocation_Kind kind, void *mem, size_t p
 
 struct Memory_Allocator {
 	Memory_Allocator_Proc proc;
-	void *context;
+	void *                context;
 };
+
+//
+//
+//
+
+enum Log_Level { LOG_LEVEL_INFO, LOG_LEVEL_WARNING, LOG_LEVEL_ERROR };
+typedef void(*Log_Proc)(void *context, Log_Level level, const char *source, const char *fmt, va_list args);
+
+struct Logger {
+	Log_Proc proc;
+	void *   context;
+};
+
+typedef void(*Fatal_Error_Proc)(const char *message);
 
 //
 //
@@ -337,6 +355,8 @@ struct Memory_Allocator {
 typedef struct Thread_Context {
 	Thread_Scratchpad scratchpad;
 	Memory_Allocator  allocator;
+	Logger            logger;
+	Fatal_Error_Proc  fatal_error;
 } Thread_Context;
 
 extern thread_local Thread_Context ThreadContext;
@@ -350,6 +370,9 @@ Memory_Arena *ThreadScratchpadI(uint32_t i);
 Memory_Arena *ThreadUnusedScratchpad(Memory_Arena **arenas, uint32_t count);
 void ResetThreadScratchpad();
 
+void ThreadContextSetAllocator(Memory_Allocator allocator);
+void ThreadContextSetLogger(Logger logger);
+
 Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);
 Memory_Allocator NullMemoryAllocator();
 
@@ -359,10 +382,27 @@ Memory_Allocator NullMemoryAllocator();
 
 struct Thread_Context_Params {
 	Memory_Allocator allocator;
-	uint32_t scratchpad_arena_count;
+	Logger           logger;
+	Fatal_Error_Proc fatal_error;
+	uint32_t         scratchpad_arena_count;
 };
 
-void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params = nullptr);
+void *DefaultMemoryAllocate(size_t size, void *context);
+void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context);
+void DefaultMemoryFree(void *ptr, size_t allocated, void *context);
+
+void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context);
+void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args);
+void DefaultFatalErrorProc(const char *message);
+
+static constexpr Thread_Context_Params ThreadContextDefaultParams = {
+	{ DefaultMemoryAllocatorProc, nullptr },
+	{ DefaultLoggerProc, nullptr },
+	DefaultFatalErrorProc,
+	MaxThreadContextScratchpadArena
+};
+
+void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &params = ThreadContextDefaultParams);
 
 
 void *MemoryAllocate(size_t size, Memory_Allocator allocator = ThreadContext.allocator);
@@ -377,6 +417,40 @@ void  operator delete(void *ptr, Memory_Allocator allocator);
 void  operator delete[](void *ptr, Memory_Allocator allocator);
 void  operator delete(void *ptr) noexcept;
 void  operator delete[](void *ptr) noexcept;
+
+//
+//
+//
+
+void WriteLogExV(Log_Level level, const char *source, const char *fmt, va_list args);
+#define WriteLogInfoExV(source, fmt, args)    WriteLogExV(LOG_LEVEL_INFO, source, fmt, args)
+#define WriteLogWarningExV(source, fmt, args) WriteLogExV(LOG_LEVEL_WARNING, source, fmt, args)
+#define WriteLogErrorExV(source, fmt, args)   WriteLogExV(LOG_LEVEL_ERROR, source, fmt, args)
+
+#define WriteLogV(level, fmt, args) WriteLogExV(level, "", fmt, args)
+#define WriteLogInfoV(fmt, args)    WriteLogExV(LOG_LEVEL_INFO, "", fmt, args)
+#define WriteLogWarningV(fmt, args) WriteLogExV(LOG_LEVEL_WARNING, "", fmt, args)
+#define WriteLogErrorV(fmt, args)   WriteLogExV(LOG_LEVEL_ERROR, "", fmt, args)
+
+void WriteLogEx(Log_Level level, const char *source, const char *fmt, ...);
+#define WriteLogInfoEx(source, fmt, ...)    WriteLogEx(LOG_LEVEL_INFO, source, fmt, ##__VA_ARGS__)
+#define WriteLogWarningEx(source, fmt, ...) WriteLogEx(LOG_LEVEL_WARNING, source, fmt, ##__VA_ARGS__)
+#define WriteLogErrorEx(source, fmt, ...)   WriteLogEx(LOG_LEVEL_ERROR, source, fmt, ##__VA_ARGS__)
+
+#define WriteLog(level, fmt, ...) WriteLogEx(level, "", fmt, ##__VA_ARGS__)
+#define WriteLogInfo(fmt, ...)    WriteLogEx(LOG_LEVEL_INFO, "", fmt, ##__VA_ARGS__)
+#define WriteLogWarning(fmt, ...) WriteLogEx(LOG_LEVEL_WARNING, "", fmt, ##__VA_ARGS__)
+#define WriteLogError(fmt, ...)   WriteLogEx(LOG_LEVEL_ERROR, "", fmt, ##__VA_ARGS__)
+
+#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
+#define DebugWriteLog   WriteLogInfo
+#define DebugWriteLogEx WriteLogInfoEx
+#else
+#define DebugWriteLog(...) 
+#define DebugWriteLogEx(...) 
+#endif
+
+void FatalError(const char *message);
 
 //
 //

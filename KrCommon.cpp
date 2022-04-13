@@ -3,7 +3,6 @@
 #include <string.h>
 
 thread_local Thread_Context ThreadContext;
-static Thread_Context_Params ThreadContextDefaultParams;
 
 struct Memory_Arena {
 	size_t current;
@@ -23,13 +22,8 @@ bool operator!=(const String a, const String b) {
 	return memcmp(a.data, b.data, a.length) != 0;
 }
 
-
 uint8_t *AlignPointer(uint8_t *location, size_t alignment) {
 	return (uint8_t *)((size_t)(location + (alignment - 1)) & ~(alignment - 1));
-}
-
-size_t AlignSize(size_t location, size_t alignment) {
-	return ((location + (alignment - 1)) & ~(alignment - 1));
 }
 
 Memory_Arena *MemoryArenaAllocate(size_t max_size, size_t initial_size) {
@@ -70,68 +64,63 @@ size_t MemoryArenaEmptySize(Memory_Arena *arena) {
 	return arena->reserved - arena->current;
 }
 
-bool MemoryArenaReserve(Memory_Arena *arena, size_t pos) {
+bool MemoryArenaEnsureCommit(Memory_Arena *arena, size_t pos) {
+	if (pos <= arena->committed) {
+		return true;
+	}
+
 	pos = Maximum(pos, MemoryArenaCommitSize);
 	uint8_t *mem = (uint8_t *)arena;
-	if (pos > arena->committed) {
-		size_t committed = AlignPower2Up(pos, MemoryArenaCommitSize);
-		committed = Minimum(committed, arena->reserved);
-		if (VirtualMemoryCommit(mem + arena->committed, committed - arena->committed)) {
-			arena->committed = committed;
-			return true;
-		}
-		return false;
+
+	size_t committed = AlignPower2Up(pos, MemoryArenaCommitSize);
+	committed = Minimum(committed, arena->reserved);
+	if (VirtualMemoryCommit(mem + arena->committed, committed - arena->committed)) {
+		arena->committed = committed;
+		return true;
 	}
-	return true;
+	return false;
+}
+
+bool MemoryArenaEnsurePos(Memory_Arena *arena, size_t pos) {
+	if (MemoryArenaEnsureCommit(arena, pos)) {
+		arena->current = pos;
+		return true;
+	}
+	return false;
 }
 
 bool MemoryArenaResize(Memory_Arena *arena, size_t pos) {
-	pos = Maximum(pos, MemoryArenaCommitSize);
-	uint8_t *mem = (uint8_t *)arena;
-	if (pos < arena->current) {
-		arena->current = pos;
+	if (MemoryArenaEnsurePos(arena, pos)) {
 		size_t committed = AlignPower2Up(pos, MemoryArenaCommitSize);
 		committed = Minimum(committed, arena->reserved);
 
+		uint8_t *mem = (uint8_t *)arena;
 		if (committed < arena->committed) {
 			if (VirtualMemoryDecommit(mem + committed, arena->committed - committed))
 				arena->committed = committed;
 		}
 		return true;
-	} else {
-		if (PushSize(arena, pos - arena->current))
-			return true;
-		return false;
 	}
+	return false;
 }
 
 void *PushSize(Memory_Arena *arena, size_t size) {
-	void *ptr = 0;
-	uint8_t *mem = (uint8_t *)arena;
-	if (arena->current + size <= arena->reserved) {
-		ptr = mem + arena->current;
-		arena->current += size;
-		if (arena->current > arena->committed) {
-			size_t committed = AlignPower2Up(arena->current, MemoryArenaCommitSize);
-			committed = Minimum(committed, arena->reserved);
-			if (VirtualMemoryCommit(mem + arena->committed, committed - arena->committed)) {
-				arena->committed = committed;
-			} else {
-				arena->current -= size;
-				ptr = 0;
-			}
-		}
-	}
-	return ptr;
+	uint8_t *mem = (uint8_t *)arena + arena->current;
+	size_t pos   = arena->current + size;
+	if (MemoryArenaEnsurePos(arena, pos))
+		return mem;
+	return 0;
 }
 
 void *PushSizeAligned(Memory_Arena *arena, size_t size, uint32_t alignment) {
-	uint8_t *mem = (uint8_t *)arena;
-	uint8_t *aligned_current = AlignPointer(mem + arena->current, alignment);
-	uint8_t *next_current = aligned_current + size;
-	size_t alloc_size = next_current - (mem + arena->current);
-	if (PushSize(arena, alloc_size))
-		return aligned_current;
+	uint8_t *mem = (uint8_t *)arena + arena->current;
+
+	uint8_t *aligned = AlignPointer(mem, alignment);
+	uint8_t *next    = aligned + size;
+	size_t pos       = arena->current + (next - mem);
+
+	if (MemoryArenaEnsurePos(arena, pos))
+		return aligned;
 	return 0;
 }
 
@@ -159,6 +148,7 @@ void EndTemporaryMemory(Temporary_Memory *temp) {
 }
 
 void FreeTemporaryMemory(Temporary_Memory *temp) {
+	MemoryArenaEnsurePos(temp->arena, temp->position);
 	MemoryArenaResize(temp->arena, temp->position);
 }
 
@@ -195,6 +185,14 @@ void ResetThreadScratchpad() {
 	for (auto &thread_arena : ThreadContext.scratchpad.arena) {
 		MemoryArenaReset(thread_arena);
 	}
+}
+
+void ThreadContextSetAllocator(Memory_Allocator allocator) {
+	ThreadContext.allocator = allocator;
+}
+
+void ThreadContextSetLogger(Logger logger) {
+	ThreadContext.logger = logger;
 }
 
 static void *MemoryArenaAllocatorAllocate(size_t size, void *context) {
@@ -263,11 +261,10 @@ Memory_Allocator NullMemoryAllocator() {
 	return allocator;
 }
 
-static void *DefaultMemoryAllocate(size_t size, void *context);
-static void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context);
-static void DefaultMemoryFree(void *ptr, size_t allocated, void *context);
+static void InitOSContent();
+static void FatalErrorOS(const char *message);
 
-static void *DefaultMemorAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
+void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
 	if (kind == ALLOCATION_KIND_ALLOC) {
 		return DefaultMemoryAllocate(new_size, context);
 	} else if (kind == ALLOCATION_KIND_REALLOC) {
@@ -278,13 +275,18 @@ static void *DefaultMemorAllocatorProc(Allocation_Kind kind, void *mem, size_t p
 	}
 }
 
-static void InitOSContent();
+void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {}
 
-void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params) {
+void DefaultFatalErrorProc(const char *message) {
+	WriteLogErrorEx("Fatal Error", message);
+	FatalErrorOS(message);
+}
+
+void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &params) {
 	InitOSContent();
 
 	if (scratchpad_size) {
-		uint32_t arena_count = params ? params->scratchpad_arena_count : MaxThreadContextScratchpadArena;
+		uint32_t arena_count = params.scratchpad_arena_count;
 		arena_count = Minimum(arena_count, MaxThreadContextScratchpadArena);
 		for (uint32_t arena_index = 0; arena_index < arena_count; ++arena_index) {
 			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaAllocate(scratchpad_size);
@@ -293,15 +295,9 @@ void InitThreadContext(uint32_t scratchpad_size, Thread_Context_Params *params) 
 		memset(&ThreadContext.scratchpad, 0, sizeof(ThreadContext.scratchpad));
 	}
 
-	if (!params) {
-		if (!ThreadContextDefaultParams.allocator.proc) {
-			ThreadContextDefaultParams.allocator.proc = DefaultMemorAllocatorProc;
-		}
-
-		params = &ThreadContextDefaultParams;
-	}
-
-	ThreadContext.allocator = params->allocator;
+	ThreadContext.allocator   = params.allocator;
+	ThreadContext.logger      = params.logger;
+	ThreadContext.fatal_error = params.fatal_error;
 }
 
 //
@@ -356,20 +352,47 @@ void operator delete[](void *ptr) noexcept {
 //
 //
 
+void WriteLogExV(Log_Level level, const char *source, const char *fmt, va_list args) {
+	ThreadContext.logger.proc(ThreadContext.logger.context, level, source, fmt, args);
+}
+
+void WriteLogEx(Log_Level level, const char *source, const char *fmt, ...) {	
+	va_list args;
+	va_start(args, fmt);
+	WriteLogExV(level, source, fmt, args);
+	va_end(args);
+}
+
+void FatalError(const char *message) {
+	ThreadContext.fatal_error(message);
+}
+
+//
+//
+//
+
 #if PLATFORM_WINDOWS == 1
 #define MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS 0
 #include <Windows.h>
 
 static void InitOSContent() {
 	SetConsoleCP(CP_UTF8);
+	SetConsoleOutputCP(CP_UTF8);
 }
 
-static void *DefaultMemoryAllocate(size_t size, void *context) {
+static void FatalErrorOS(const char *message) {
+	wchar_t wmessage[4096];
+	int wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), wmessage, 4095);
+	wmessage[wlen] = 0;
+	FatalAppExitW(0, wmessage);
+}
+
+void *DefaultMemoryAllocate(size_t size, void *context) {
 	HANDLE heap = GetProcessHeap();
 	return HeapAlloc(heap, 0, size);
 }
 
-static void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
+void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
 	HANDLE heap = GetProcessHeap();
 	if (ptr) {
 		return HeapReAlloc(heap, 0, ptr, new_size);
@@ -378,7 +401,7 @@ static void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new
 	}
 }
 
-static void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
+void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
 	HANDLE heap = GetProcessHeap();
 	HeapFree(heap, 0, ptr);
 }
@@ -407,15 +430,19 @@ bool VirtualMemoryFree(void *ptr, size_t size) {
 
 static void InitOSContent() {}
 
-static void *DefaultMemoryAllocate(size_t size, void *context) {
+static void FatalErrorOS(const char *message) {
+	exit(1);
+}
+
+void *DefaultMemoryAllocate(size_t size, void *context) {
 	return malloc(size);
 }
 
-static void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
+void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
 	return realloc(ptr, new_size);
 }
 
-static void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
+void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
 	free(ptr);
 }
 

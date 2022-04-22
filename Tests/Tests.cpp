@@ -1,5 +1,6 @@
 // Compilation
 // MSVC: cl .\Tests.cpp /I../ -FeTests /std:c++17
+// GCC: g++ Tests.cpp -I../ -o Tests
 
 #define ASSERTION_HANDLED
 

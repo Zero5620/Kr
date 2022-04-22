@@ -157,12 +157,12 @@ Memory_Arena *ThreadScratchpad() {
 }
 
 Memory_Arena *ThreadScratchpadI(uint32_t i) {
-	if constexpr (MaxThreadContextScratchpadArena == 1) {
+#if __cplusplus >= 201703L
+	if constexpr (MaxThreadContextScratchpadArena == 1)
 		return ThreadContext.scratchpad.arena[0];
-	} else {
-		Assert(i < ArrayCount(ThreadContext.scratchpad.arena));
-		return ThreadContext.scratchpad.arena[i];
-	}
+#endif
+	Assert(i < ArrayCount(ThreadContext.scratchpad.arena));
+	return ThreadContext.scratchpad.arena[i];
 }
 
 Memory_Arena *ThreadUnusedScratchpad(Memory_Arena **arenas, uint32_t count) {

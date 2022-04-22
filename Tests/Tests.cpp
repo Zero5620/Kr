@@ -8,13 +8,6 @@
 
 #include <stdio.h>
 
-void LogProcedure(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
-	FILE *fp = level == LOG_LEVEL_INFO ? stdout : stderr;
-	fprintf(fp, "[%s] ", source);
-	vfprintf(fp, fmt, args);
-	fprintf(fp, "\n");
-}
-
 void AssertHandle(const char *reason, const char *file, int line, const char *proc) {
 	printf("[ ERROR ] --- Assertion Failed: %s:%d, procedure: %s\n", file, line, proc);
 }

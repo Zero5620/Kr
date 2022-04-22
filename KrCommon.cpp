@@ -92,7 +92,7 @@ bool MemoryArenaEnsurePos(Memory_Arena *arena, size_t pos) {
 bool MemoryArenaResize(Memory_Arena *arena, size_t pos) {
 	if (MemoryArenaEnsurePos(arena, pos)) {
 		size_t committed = AlignPower2Up(pos, MemoryArenaCommitSize);
-		committed = Minimum(committed, arena->reserved);
+		committed = Clamp(MemoryArenaCommitSize, arena->reserved, committed);
 
 		uint8_t *mem = (uint8_t *)arena;
 		if (committed < arena->committed) {

@@ -34,16 +34,22 @@
 
 #if defined(__ANDROID__) || defined(__ANDROID_API__)
 #define PLATFORM_ANDROID 1
+#define __PLATFORM__ "Andriod"
 #elif defined(__gnu_linux__) || defined(__linux__) || defined(linux) || defined(__linux)
 #define PLATFORM_LINUX 1
+#define __PLATFORM__ "linux"
 #elif defined(macintosh) || defined(Macintosh)
 #define PLATFORM_MAC 1
+#define __PLATFORM__ "Mac"
 #elif defined(__APPLE__) && defined(__MACH__)
 #define PLATFORM_MAC 1
+#define __PLATFORM__ "Mac"
 #elif defined(__APPLE__)
 #define PLATFORM_IOS 1
+#define __PLATFORM__ "iOS"
 #elif defined(_WIN64) || defined(_WIN32)
 #define PLATFORM_WINDOWS 1
+#define __PLATFORM__ "Windows"
 #else
 #error Missing Operating System Detection
 #endif
@@ -231,6 +237,11 @@ struct String {
 	inline const uint8_t *end() const { return data + length; }
 };
 
+typedef String Buffer;
+
+#define StrFmt    "%.*s"
+#define StrArg(s) (int)(s).length, (s).data
+
 bool operator==(const String a, const String b);
 bool operator!=(const String a, const String b);
 
@@ -284,9 +295,11 @@ size_t MemoryArenaCapSize(Memory_Arena *arena);
 size_t MemoryArenaUsedSize(Memory_Arena *arena);
 size_t MemoryArenaEmptySize(Memory_Arena *arena);
 
-bool MemoryArenaEnsureCommit(Memory_Arena *arena, size_t pos);
-bool MemoryArenaEnsurePos(Memory_Arena *arena, size_t pos);
-bool MemoryArenaResize(Memory_Arena *arena, size_t pos);
+bool  MemoryArenaEnsureCommit(Memory_Arena *arena, size_t pos);
+bool  MemoryArenaSetPos(Memory_Arena *arena, size_t pos);
+bool  MemoryArenaPackToPos(Memory_Arena *arena, size_t pos);
+bool  MemoryArenaAlignCurrent(Memory_Arena *arena, size_t alignment);
+void *MemoryArenaGetCurrent(Memory_Arena *arena);
 
 #define MemoryZeroSize(mem, size) memset(mem, 0, size)
 #define MemoryZero(var) MemoryZeroSize(&var, sizeof(var))
@@ -299,9 +312,11 @@ void *PushSizeAlignedZero(Memory_Arena *arena, size_t size, uint32_t alignment);
 #define PushType(arena, type) (type *)PushSizeAligned(arena, sizeof(type), alignof(type))
 #define PushTypeZero(arena, type) (type *)PushSizeAlignedZero(arena, sizeof(type), alignof(type))
 #define PushArray(arena, type, count) (type *)PushSizeAligned(arena, sizeof(type) * (count), alignof(type))
-#define PushArrayZero(arena, type, count) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count). alignof(type))
+#define PushArrayZero(arena, type, count) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count), alignof(type))
 #define PushArrayAligned(arena, type, count, alignment) (type *)PushSizeAligned(arena, sizeof(type) * (count), alignment)
 #define PushArrayAlignedZero(arena, type, count, alignment) (type *)PushSizeAlignedZero(arena, sizeof(type) * (count), alignment)
+
+void PopSize(Memory_Arena *arena, size_t size);
 
 typedef struct Temporary_Memory {
 	Memory_Arena *arena;
@@ -422,32 +437,32 @@ void  operator delete[](void *ptr) noexcept;
 //
 //
 
-void WriteLogExV(Log_Level level, const char *source, const char *fmt, va_list args);
-#define WriteLogInfoExV(source, fmt, args)    WriteLogExV(LOG_LEVEL_INFO, source, fmt, args)
-#define WriteLogWarningExV(source, fmt, args) WriteLogExV(LOG_LEVEL_WARNING, source, fmt, args)
-#define WriteLogErrorExV(source, fmt, args)   WriteLogExV(LOG_LEVEL_ERROR, source, fmt, args)
+void LogExV(Log_Level level, const char *source, const char *fmt, va_list args);
+#define LogInfoExV(source, fmt, args)    LogExV(LOG_LEVEL_INFO, source, fmt, args)
+#define LogWarningExV(source, fmt, args) LogExV(LOG_LEVEL_WARNING, source, fmt, args)
+#define LogErrorExV(source, fmt, args)   LogExV(LOG_LEVEL_ERROR, source, fmt, args)
 
-#define WriteLogV(level, fmt, args) WriteLogExV(level, "", fmt, args)
-#define WriteLogInfoV(fmt, args)    WriteLogExV(LOG_LEVEL_INFO, "", fmt, args)
-#define WriteLogWarningV(fmt, args) WriteLogExV(LOG_LEVEL_WARNING, "", fmt, args)
-#define WriteLogErrorV(fmt, args)   WriteLogExV(LOG_LEVEL_ERROR, "", fmt, args)
+#define LogV(level, fmt, args) LogExV(level, "", fmt, args)
+#define LogInfoV(fmt, args)    LogExV(LOG_LEVEL_INFO, "", fmt, args)
+#define LogWarningV(fmt, args) LogExV(LOG_LEVEL_WARNING, "", fmt, args)
+#define LogErrorV(fmt, args)   LogExV(LOG_LEVEL_ERROR, "", fmt, args)
 
-void WriteLogEx(Log_Level level, const char *source, const char *fmt, ...);
-#define WriteLogInfoEx(source, fmt, ...)    WriteLogEx(LOG_LEVEL_INFO, source, fmt, ##__VA_ARGS__)
-#define WriteLogWarningEx(source, fmt, ...) WriteLogEx(LOG_LEVEL_WARNING, source, fmt, ##__VA_ARGS__)
-#define WriteLogErrorEx(source, fmt, ...)   WriteLogEx(LOG_LEVEL_ERROR, source, fmt, ##__VA_ARGS__)
+void LogEx(Log_Level level, const char *source, const char *fmt, ...);
+#define LogInfoEx(source, fmt, ...)    LogEx(LOG_LEVEL_INFO, source, fmt, ##__VA_ARGS__)
+#define LogWarningEx(source, fmt, ...) LogEx(LOG_LEVEL_WARNING, source, fmt, ##__VA_ARGS__)
+#define LogErrorEx(source, fmt, ...)   LogEx(LOG_LEVEL_ERROR, source, fmt, ##__VA_ARGS__)
 
-#define WriteLog(level, fmt, ...) WriteLogEx(level, "", fmt, ##__VA_ARGS__)
-#define WriteLogInfo(fmt, ...)    WriteLogEx(LOG_LEVEL_INFO, "", fmt, ##__VA_ARGS__)
-#define WriteLogWarning(fmt, ...) WriteLogEx(LOG_LEVEL_WARNING, "", fmt, ##__VA_ARGS__)
-#define WriteLogError(fmt, ...)   WriteLogEx(LOG_LEVEL_ERROR, "", fmt, ##__VA_ARGS__)
+#define Log(level, fmt, ...) LogEx(level, "", fmt, ##__VA_ARGS__)
+#define LogInfo(fmt, ...)    LogEx(LOG_LEVEL_INFO, "", fmt, ##__VA_ARGS__)
+#define LogWarning(fmt, ...) LogEx(LOG_LEVEL_WARNING, "", fmt, ##__VA_ARGS__)
+#define LogError(fmt, ...)   LogEx(LOG_LEVEL_ERROR, "", fmt, ##__VA_ARGS__)
 
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
-#define DebugWriteLog   WriteLogInfo
-#define DebugWriteLogEx WriteLogInfoEx
+#define Trace(fmt, ...) LogEx(LOG_LEVEL_INFO, "Trace", fmt, ##__VA_ARGS__)
+#define TraceEx         LogInfoEx
 #else
-#define DebugWriteLog(...) 
-#define DebugWriteLogEx(...) 
+#define Trace(...) 
+#define TraceEx(...) 
 #endif
 
 void FatalError(const char *message);

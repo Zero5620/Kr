@@ -228,6 +228,114 @@ Mat4 Mat4::PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float
 	return m;
 }
 
+Quat Quat::Identity() {
+	return Quat(0, 0, 0, 1);
+}
+
+Quat Quat::FromAngleAxis(Vec3 axis, float angle) {
+	float r = MathCos(angle * 0.5f);
+	float s = MathSin(angle * 0.5f);
+	float i = s * axis.x;
+	float j = s * axis.y;
+	float k = s * axis.z;
+	return Quat(i, j, k, r);
+}
+
+Quat Quat::FromAngleAxisNormalized(Vec3 axis, float angle) {
+	return FromAngleAxis(Normalize(axis), angle);
+}
+
+Quat Quat::FromMat4(const Mat4 &m) {
+	Quat  q;
+	float trace = m.m2[0][0] + m.m2[1][1] + m.m2[2][2];
+	if (trace > 0.0f) {
+		float s = 0.5f / MathSquareRoot(trace + 1.0f);
+		q.v4.w = 0.25f / s;
+		q.v4.x = (m.m2[2][1] - m.m2[1][2]) * s;
+		q.v4.y = (m.m2[0][2] - m.m2[2][0]) * s;
+		q.v4.z = (m.m2[1][0] - m.m2[0][1]) * s;
+	} else {
+		if (m.m2[0][0] > m.m2[1][1] && m.m2[0][0] > m.m2[2][2]) {
+			float s = 2.0f * MathSquareRoot(1.0f + m.m2[0][0] - m.m2[1][1] - m.m2[2][2]);
+			q.v4.w = (m.m2[2][1] - m.m2[1][2]) / s;
+			q.v4.x = 0.25f * s;
+			q.v4.y = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.v4.z = (m.m2[0][2] + m.m2[2][0]) / s;
+		} else if (m.m2[1][1] > m.m2[2][2]) {
+			float s = 2.0f * MathSquareRoot(1.0f + m.m2[1][1] - m.m2[0][0] - m.m2[2][2]);
+			q.v4.w = (m.m2[0][2] - m.m2[2][0]) / s;
+			q.v4.x = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.v4.y = 0.25f * s;
+			q.v4.z = (m.m2[1][2] + m.m2[2][1]) / s;
+		} else {
+			float s = 2.0f * MathSquareRoot(1.0f + m.m2[2][2] - m.m2[0][0] - m.m2[1][1]);
+			q.v4.w = (m.m2[1][0] - m.m2[0][1]) / s;
+			q.v4.x = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.v4.y = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.v4.z = 0.25f * s;
+		}
+	}
+	return Normalize(q);
+}
+
+Quat Quat::FromMat4Nomalized(const Mat4 &m) {
+	Mat4 nm;
+	nm.rows[0] = Vec4(Normalize(VecXYZ(m.rows[0])), m.rows[0].w);
+	nm.rows[1] = Vec4(Normalize(VecXYZ(m.rows[1])), m.rows[1].w);
+	nm.rows[2] = Vec4(Normalize(VecXYZ(m.rows[2])), m.rows[2].w);
+	nm.rows[3] = Vec4(Normalize(VecXYZ(m.rows[3])), m.rows[3].w);
+	return Quat::FromMat4(nm);
+}
+
+Quat Quat::FromEulerAngles(float pitch, float yaw, float roll) {
+	float cy = MathCos(roll * 0.5f);
+	float sy = MathSin(roll * 0.5f);
+	float cp = MathCos(yaw * 0.5f);
+	float sp = MathSin(yaw * 0.5f);
+	float cr = MathCos(pitch * 0.5f);
+	float sr = MathSin(pitch * 0.5f);
+
+	Quat  q;
+	q.v4.w = cy * cp * cr + sy * sp * sr;
+	q.v4.x = cy * cp * sr - sy * sp * cr;
+	q.v4.y = sy * cp * sr + cy * sp * cr;
+	q.v4.z = sy * cp * cr - cy * sp * sr;
+	return q;
+}
+
+Quat Quat::FromEulerAngles(Vec3 euler) {
+	return Quat::FromEulerAngles(euler.x, euler.y, euler.z);
+}
+
+Quat Quat::Between(Vec3 from, Vec3 to) {
+	Quat q;
+	float w = 1.0f + DotProduct(from, to);
+
+	if (q.m[3]) {
+		q.v4 = Vec4(CrossProduct(from, to), w);
+	} else {
+		Vec3 xyz = MathAbsolute(from.x) > MathAbsolute(from.z) ? Vec3(-from.y, from.x, 0.f) : Vec3(0.f, -from.z, from.y);
+		q.v4 = Vec4(xyz, w);
+	}
+
+	return Normalize(q);
+}
+
+Quat Quat::Between(Quat a, Quat b) {
+	Quat t = Conjugate(a);
+	t = t * (1.0f / DotProduct(t, t));
+	return t * b;
+}
+
+Quat Quat::LookAt(Vec3 from, Vec3 to, Vec3 world_forward) {
+	Vec3 dir = to - from;
+	return Quat::Between(world_forward, dir);
+}
+
+//
+//
+//
+
 float Determinant(const Mat2 &mat) {
 	return mat.m2[0][0] * mat.m2[1][1] - mat.m2[0][1] * mat.m2[1][0];
 }
@@ -539,10 +647,6 @@ Mat4 ToMat4(const Mat3 &mat) {
 //
 //
 
-Quat IdentityQuat() {
-	return Quat(0, 0, 0, 1);
-}
-
 float DotProduct(Quat q1, Quat q2) {
 	return DotProduct(q1.v4, q2.v4);
 }
@@ -587,19 +691,6 @@ Vec3 Rotate(Quat q, Vec3 v) {
 	return Vec3(res.v4.x, res.v4.y, res.v4.z);
 }
 
-Quat QuatFromAngleAxis(Vec3 axis, float angle) {
-	float r = MathCos(angle * 0.5f);
-	float s = MathSin(angle * 0.5f);
-	float i = s * axis.x;
-	float j = s * axis.y;
-	float k = s * axis.z;
-	return Quat(i, j, k, r);
-}
-
-Quat QuatFromAngleAxisNormalized(Vec3 axis, float angle) {
-	return QuatFromAngleAxis(Normalize(axis), angle);
-}
-
 void GetAngleAxis(Quat q, float *angle, Vec3 *axis) {
 	float len = MathSquareRoot(q.m[0] * q.m[0] + q.m[1] * q.m[1] + q.m[2] * q.m[2]);
 	if (len) {
@@ -628,51 +719,6 @@ float GetAngle(Quat q) {
 	float angle;
 	GetAngleAxis(q, &angle, &axis);
 	return angle;
-}
-
-Quat QuatFromMat4(const Mat4 &m) {
-	Quat  q;
-	float trace = m.m2[0][0] + m.m2[1][1] + m.m2[2][2];
-	if (trace > 0.0f) {
-		float s = 0.5f / MathSquareRoot(trace + 1.0f);
-		q.v4.w = 0.25f / s;
-		q.v4.x = (m.m2[2][1] - m.m2[1][2]) * s;
-		q.v4.y = (m.m2[0][2] - m.m2[2][0]) * s;
-		q.v4.z = (m.m2[1][0] - m.m2[0][1]) * s;
-	}
-	else {
-		if (m.m2[0][0] > m.m2[1][1] && m.m2[0][0] > m.m2[2][2]) {
-			float s = 2.0f * MathSquareRoot(1.0f + m.m2[0][0] - m.m2[1][1] - m.m2[2][2]);
-			q.v4.w = (m.m2[2][1] - m.m2[1][2]) / s;
-			q.v4.x = 0.25f * s;
-			q.v4.y = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.v4.z = (m.m2[0][2] + m.m2[2][0]) / s;
-		}
-		else if (m.m2[1][1] > m.m2[2][2]) {
-			float s = 2.0f * MathSquareRoot(1.0f + m.m2[1][1] - m.m2[0][0] - m.m2[2][2]);
-			q.v4.w = (m.m2[0][2] - m.m2[2][0]) / s;
-			q.v4.x = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.v4.y = 0.25f * s;
-			q.v4.z = (m.m2[1][2] + m.m2[2][1]) / s;
-		}
-		else {
-			float s = 2.0f * MathSquareRoot(1.0f + m.m2[2][2] - m.m2[0][0] - m.m2[1][1]);
-			q.v4.w = (m.m2[1][0] - m.m2[0][1]) / s;
-			q.v4.x = (m.m2[0][2] + m.m2[2][0]) / s;
-			q.v4.y = (m.m2[1][2] + m.m2[2][1]) / s;
-			q.v4.z = 0.25f * s;
-		}
-	}
-	return Normalize(q);
-}
-
-Quat QuatFromMat4Nomalized(const Mat4 &m) {
-	Mat4 nm;
-	nm.rows[0] = Vec4(Normalize(VecXYZ(m.rows[0])), m.rows[0].w);
-	nm.rows[1] = Vec4(Normalize(VecXYZ(m.rows[1])), m.rows[1].w);
-	nm.rows[2] = Vec4(Normalize(VecXYZ(m.rows[2])), m.rows[2].w);
-	nm.rows[3] = Vec4(Normalize(VecXYZ(m.rows[3])), m.rows[3].w);
-	return QuatFromMat4(nm);
 }
 
 Mat4 GetMat4(Quat q) {
@@ -741,26 +787,6 @@ Vec3 GetUp(Quat q) {
 	return Normalize(forward);
 }
 
-Quat QuatFromEulerAngles(float pitch, float yaw, float roll) {
-	float cy = MathCos(roll * 0.5f);
-	float sy = MathSin(roll * 0.5f);
-	float cp = MathCos(yaw * 0.5f);
-	float sp = MathSin(yaw * 0.5f);
-	float cr = MathCos(pitch * 0.5f);
-	float sr = MathSin(pitch * 0.5f);
-
-	Quat  q;
-	q.v4.w = cy * cp * cr + sy * sp * sr;
-	q.v4.x = cy * cp * sr - sy * sp * cr;
-	q.v4.y = sy * cp * sr + cy * sp * cr;
-	q.v4.z = sy * cp * cr - cy * sp * sr;
-	return q;
-}
-
-Quat QuatFromEulerAngles(Vec3 euler) {
-	return QuatFromEulerAngles(euler.x, euler.y, euler.z);
-}
-
 Vec3 GetEulerAngles(Quat q) {
 	Vec3  angles;
 
@@ -782,32 +808,6 @@ Vec3 GetEulerAngles(Quat q) {
 	angles.y = MathArcTan2(siny_cosp, cosy_cosp);
 
 	return angles;
-}
-
-Quat QuatBetween(Vec3 from, Vec3 to) {
-	Quat q;
-	float w = 1.0f + DotProduct(from, to);
-
-	if (q.m[3]) {
-		q.v4 = Vec4(CrossProduct(from, to), w);
-	}
-	else {
-		Vec3 xyz = MathAbsolute(from.x) > MathAbsolute(from.z) ? Vec3(-from.y, from.x, 0.f) : Vec3(0.f, -from.z, from.y);
-		q.v4 = Vec4(xyz, w);
-	}
-
-	return Normalize(q);
-}
-
-Quat QuatBetween(Quat a, Quat b) {
-	Quat t = Conjugate(a);
-	t = t * (1.0f / DotProduct(t, t));
-	return t * b;
-}
-
-Quat QuatLookAt(Vec3 from, Vec3 to, Vec3 world_forward) {
-	Vec3 dir = to - from;
-	return QuatBetween(world_forward, dir);
 }
 
 //
@@ -1156,23 +1156,23 @@ Vec2 Reflect(Vec2 d, Vec2 n) {
 	return r;
 }
 
-UintColor Vec4ToUintColor(Vec4 v) {
+Packed_Color PackColor(Vec4 v) {
 	uint8_t r = static_cast<uint8_t>(255.0f * v.x);
 	uint8_t g = static_cast<uint8_t>(255.0f * v.y);
 	uint8_t b = static_cast<uint8_t>(255.0f * v.z);
 	uint8_t a = static_cast<uint8_t>(255.0f * v.w);
-	return UintColor(r, g, b, a);
+	return Packed_Color(r, g, b, a);
 }
 
-UintColor Vec3ToUintColor(Vec3 v) {
+Packed_Color PackColor(Vec3 v) {
 	uint8_t r = static_cast<uint8_t>(255.0f * v.x);
 	uint8_t g = static_cast<uint8_t>(255.0f * v.y);
 	uint8_t b = static_cast<uint8_t>(255.0f * v.z);
 	uint8_t a = 255;
-	return UintColor(r, g, b, a);
+	return Packed_Color(r, g, b, a);
 }
 
-Vec4 UintColorToVec4(UintColor c) {
+Vec4 UnpackColor4(Packed_Color c) {
 	float div = 1.0f / 255.0f;
 	float r = static_cast<float>(c.r) * div;
 	float g = static_cast<float>(c.g) * div;
@@ -1181,7 +1181,7 @@ Vec4 UintColorToVec4(UintColor c) {
 	return Vec4(r, g, b, a);
 }
 
-Vec3 UintColorToVec3(UintColor c) {
+Vec3 UnpackColor3(Packed_Color c) {
 	float div = 1.0f / 255.0f;
 	float r = static_cast<float>(c.r) * div;
 	float g = static_cast<float>(c.g) * div;

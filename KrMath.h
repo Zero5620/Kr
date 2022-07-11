@@ -135,6 +135,17 @@ union Quat {
 		m[2] = d;
 		m[3] = a;
 	}
+
+	static Quat Identity();
+	static Quat FromAngleAxis(Vec3 axis, float angle);
+	static Quat FromAngleAxisNormalized(Vec3 axis, float angle);
+	static Quat FromMat4(const Mat4 &m);
+	static Quat FromMat4Nomalized(const Mat4 &m);
+	static Quat FromEulerAngles(float pitch, float yaw, float roll);
+	static Quat FromEulerAngles(Vec3 euler);
+	static Quat Between(Vec3 from, Vec3 to);
+	static Quat Between(Quat a, Quat b);
+	static Quat LookAt(Vec3 from, Vec3 to, Vec3 world_forward);
 };
 
 #define FmtVec2 "[%f, %f]"
@@ -596,7 +607,6 @@ INLINE_PROCEDURE Quat operator*(float s, Quat q) {
 	return Quat(q.v4 * s);
 }
 
-Quat        IdentityQuat();
 float       DotProduct(Quat q1, Quat q2);
 float       Length(Quat q);
 Quat        Normalize(Quat q);
@@ -606,37 +616,29 @@ Vec3        Rotate(Quat q, Vec3 v);
 INLINE_PROCEDURE Vec3 operator*(Quat q, Vec3 v) {
 	Rotate(q, v);
 }
-Quat                          QuatFromAngleAxis(Vec3 axis, float angle);
-Quat                          QuatFromAngleAxisNormalized(Vec3 axis, float angle);
-void                          GetAngleAxis(Quat q, float *angle, Vec3 *axis);
-Vec3                          GetAxis(Quat q);
-float                         GetAngle(Quat q);
-Quat                          QuatFromMat4(const Mat4 &m);
-Quat                          QuatFromMat4Nomalized(const Mat4 &m);
-Mat4                          GetMat4(Quat q);
-Vec3                          GetForward(Quat q);
-Vec3                          GetRight(Quat q);
-Vec3                          GetUp(Quat q);
-Quat                          QuatFromEulerAngles(float pitch, float yaw, float roll);
-Quat                          QuatFromEulerAngles(Vec3 euler);
-Vec3                          GetEulerAngles(Quat q);
-Quat                          QuatBetween(Vec3 from, Vec3 to);
-Quat                          QuatBetween(Quat a, Quat b);
-Quat                          QuatLookAt(Vec3 from, Vec3 to, Vec3 world_forward);
 
-Vec3                          LinearToSrgb(Vec3 color);
-Vec4                          LinearToSrgb(Vec4 color);
-Vec3                          LinearToSrgb(Vec3 color, float gamma);
-Vec4                          LinearToSrgb(Vec4 color, float gamma);
-Vec3                          SrgbToLinear(Vec3 color);
-Vec4                          SrgbToLinear(Vec4 color);
-Vec3                          SrgbToLinear(Vec3 color, float gamma);
-Vec4                          SrgbToLinear(Vec4 color, float gamma);
+void  GetAngleAxis(Quat q, float *angle, Vec3 *axis);
+Vec3  GetAxis(Quat q);
+float GetAngle(Quat q);
+Mat4  GetMat4(Quat q);
+Vec3  GetForward(Quat q);
+Vec3  GetRight(Quat q);
+Vec3  GetUp(Quat q);
+Vec3  GetEulerAngles(Quat q);
 
-Vec3                          HsvToRgb(Vec3 c);
-Vec3                          RgbToHsv(Vec3 c);
-Vec4                          HsvToRgb(Vec4 c);
-Vec4                          RgbToHsv(Vec4 c);
+Vec3 LinearToSrgb(Vec3 color);
+Vec4 LinearToSrgb(Vec4 color);
+Vec3 LinearToSrgb(Vec3 color, float gamma);
+Vec4 LinearToSrgb(Vec4 color, float gamma);
+Vec3 SrgbToLinear(Vec3 color);
+Vec4 SrgbToLinear(Vec4 color);
+Vec3 SrgbToLinear(Vec3 color, float gamma);
+Vec4 SrgbToLinear(Vec4 color, float gamma);
+
+Vec3 HsvToRgb(Vec3 c);
+Vec3 RgbToHsv(Vec3 c);
+Vec4 HsvToRgb(Vec4 c);
+Vec4 RgbToHsv(Vec4 c);
 
 template <typename Type> Type Lerp(Type from, Type to, float t) {
 	return (1 - t) * from + t * to;
@@ -682,17 +684,17 @@ template <typename Type> Type Slerp(Type from, Type to, float angle, float t) {
 	return (mts * from + ts * to) * (1.0f / s);
 }
 
-Mat2                        Lerp(const Mat2 &from, const Mat2 &to, float t);
-Mat3                        Lerp(const Mat3 &from, const Mat3 &to, float t);
-Mat4                        Lerp(const Mat4 &from, const Mat4 &to, float t);
-Vec2                        Slerp(Vec2 from, Vec2 to, float t);
-Vec3                        Slerp(Vec3 from, Vec3 to, float t);
-Quat                        Slerp(Quat from, Quat to, float t);
-float                       Step(float edge, float val);
-Vec2                        Step(Vec2 edge, Vec2 val);
-Vec3                        Step(Vec3 edge, Vec3 val);
-Vec4                        Step(Vec4 edge, Vec4 val);
-Quat                        Step(Quat edge, Quat val);
+Mat2  Lerp(const Mat2 &from, const Mat2 &to, float t);
+Mat3  Lerp(const Mat3 &from, const Mat3 &to, float t);
+Mat4  Lerp(const Mat4 &from, const Mat4 &to, float t);
+Vec2  Slerp(Vec2 from, Vec2 to, float t);
+Vec3  Slerp(Vec3 from, Vec3 to, float t);
+Quat  Slerp(Quat from, Quat to, float t);
+float Step(float edge, float val);
+Vec2  Step(Vec2 edge, Vec2 val);
+Vec3  Step(Vec3 edge, Vec3 val);
+Vec4  Step(Vec4 edge, Vec4 val);
+Quat  Step(Quat edge, Quat val);
 
 template <typename T> float SmoothStepZeroChecked(T a, T b, T v) {
 	float div_distance = Distance(a, b);
@@ -724,22 +726,16 @@ Vec2 RotateAround(Vec2 point, Vec2 center, float angle);
 Quat RotateTowards(Quat from, Quat to, float max_angle);
 Vec2 Reflect(Vec2 d, Vec2 n);
 
-union UintColor {
-	struct {
-		uint8_t r, g, b, a;
-	};
-	uint8_t channels[4];
-
-	UintColor() {
-	}
-	UintColor(uint8_t x, uint8_t y, uint8_t z, uint8_t w) : r(x), g(y), b(z), a(w) {
-	}
+union Packed_Color {
+	uint8_t r, g, b, a;
+	Packed_Color() {}
+	Packed_Color(uint8_t x, uint8_t y, uint8_t z, uint8_t w) : r(x), g(y), b(z), a(w) {}
 };
 
-UintColor Vec4ToUintColor(Vec4 v);
-UintColor Vec3ToUintColor(Vec3 v);
-Vec4      UintColorToVec4(UintColor c);
-Vec3      UintColorToVec3(UintColor c);
+Packed_Color PackColor(Vec4 v);
+Packed_Color PackColor(Vec3 v);
+Vec4      UnpackColor4(Packed_Color c);
+Vec3      UnpackColor3(Packed_Color c);
 
 struct Rect {
 	Vec2 min;

@@ -1,9 +1,230 @@
 #include "KrMath.h"
 
-Mat2 IdentityMat2() {
+Mat2 Mat2::Scalar(float x, float y) {
 	Mat2 m;
-	m.rows[0] = Vec2(1.0f, 0.0f);
-	m.rows[1] = Vec2(0.0f, 1.0f);
+	m.rows[0] = Vec2(x, 0.0f);
+	m.rows[1] = Vec2(0.0f, y);
+	return m;
+}
+
+Mat2 Mat2::Scalar(Vec2 s) {
+	Mat2 m;
+	m.rows[0] = Vec2(s.x, 0.0f);
+	m.rows[1] = Vec2(0.0f, s.y);
+	return m;
+}
+
+Mat2 Mat2::Rotation(float angle) {
+	float c = MathCos(angle);
+	float s = MathSin(angle);
+
+	Mat2  mat;
+	mat.rows[0] = Vec2(c, -s);
+	mat.rows[1] = Vec2(s, c);
+	return mat;
+}
+
+Mat3 Mat3::Scalar(float S_1, float S_2) {
+	Mat3 m;
+	m.rows[0] = Vec3(S_1, 0.0f, 0.0f);
+	m.rows[1] = Vec3(0.0f, S_2, 0.0f);
+	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat3 Mat3::Scalar(Vec2 s) {
+	return Scalar(s.x, s.y);
+}
+
+Mat3 Mat3::Translation(float T_x, float T_y) {
+	Mat3 m;
+	m.rows[0] = Vec3(1.0f, 0.0f, T_x);
+	m.rows[1] = Vec3(0.0f, 1.0f, T_y);
+	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat3 Mat3::Translation(Vec2 t) {
+	return Translation(t.x, t.y);
+}
+
+Mat3 Mat3::Rotation(float angle) {
+	Mat3  m;
+	float c = MathCos(angle);
+	float s = MathSin(angle);
+	m.rows[0] = Vec3(c, -s, 0.0f);
+	m.rows[1] = Vec3(s, c, 0.0f);
+	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat3 Mat3::LookAt(Vec2 from, Vec2 to, Vec2 forward) {
+	Vec2  dir = Normalize(to - from);
+	float cos_theta = DotProduct(dir, forward);
+	float sin_theta = MathSquareRoot(1.0f - cos_theta * cos_theta);
+
+	Mat3  m;
+	m.rows[0] = Vec3(cos_theta, -sin_theta, from.x);
+	m.rows[1] = Vec3(sin_theta, cos_theta, from.y);
+	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::Scalar(float S_1, float S_2, float S_3) {
+	Mat4 m;
+	m.rows[0] = Vec4(S_1, 0.0f, 0.0f, 0.0f);
+	m.rows[1] = Vec4(0.0f, S_2, 0.0f, 0.0f);
+	m.rows[2] = Vec4(0.0f, 0.0f, S_3, 0.0f);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::Scalar(Vec3 s) {
+	return Scalar(s.x, s.y, s.z);
+}
+
+Mat4 Mat4::Translation(float T_x, float T_y, float T_z) {
+	Mat4 m;
+	m.rows[0] = Vec4(1.0f, 0.0f, 0.0f, T_x);
+	m.rows[1] = Vec4(0.0f, 1.0f, 0.0f, T_y);
+	m.rows[2] = Vec4(0.0f, 0.0f, 1.0f, T_z);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::Translation(Vec3 t) {
+	return Translation(t.x, t.y, t.z);
+}
+
+Mat4 Mat4::RotationX(float angle) {
+	Mat4 m;
+	m.rows[0] = Vec4(1.0f, 0.0f, 0.0f, 0.0f);
+	m.rows[1] = Vec4(0.0f, MathCos(angle), -MathSin(angle), 0.0f);
+	m.rows[2] = Vec4(0.0f, MathSin(angle), MathCos(angle), 0.0f);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::RotationY(float angle) {
+	Mat4 m;
+	m.rows[0] = Vec4(MathCos(angle), 0.0f, MathSin(angle), 0.0f);
+	m.rows[1] = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
+	m.rows[2] = Vec4(-MathSin(angle), 0.0f, MathCos(angle), 0.0f);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::RotationZ(float angle) {
+	Mat4 m;
+	m.rows[0] = Vec4(MathCos(angle), -MathSin(angle), 0.0f, 0.0f);
+	m.rows[1] = Vec4(MathSin(angle), MathCos(angle), 0.0f, 0.0f);
+	m.rows[2] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::Rotation(float x, float y, float z, float angle) {
+	float c = MathCos(angle);
+	float s = MathSin(angle);
+
+	float x2 = x * x;
+	float xy = x * y;
+	float zx = x * z;
+	float y2 = y * y;
+	float yz = y * z;
+	float z2 = z * z;
+
+	Mat4  m;
+	m.rows[0] = Vec4(c + x2 * (1 - c), xy * (1 - c) - z * s, zx * (1 - c) + y * s, 0.0f);
+	m.rows[1] = Vec4(xy * (1 - c) + z * s, c + y2 * (1 - c), yz * (1 - c) - x * s, 0.0f);
+	m.rows[2] = Vec4(zx * (1 - c) - y * s, yz * (1 - c) + x * s, c + z2 * (1 - c), 0.0f);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::Rotation(Vec3 axis, float angle) {
+	return Rotation(axis.x, axis.y, axis.z, angle);
+}
+
+Mat4 Mat4::LookAt(Vec3 from, Vec3 to, Vec3 world_up) {
+	Vec3 forward = Normalize(from - to);
+	Vec3 right = Normalize(CrossProduct(world_up, forward));
+	Vec3 up = CrossProduct(right, forward);
+
+	Mat4 lookat;
+	lookat.rows[0] = Vec4(right.x, up.x, forward.x, -from.x);
+	lookat.rows[1] = Vec4(right.y, up.y, forward.y, -from.y);
+	lookat.rows[2] = Vec4(right.z, up.z, forward.z, -from.z);
+	lookat.rows[3] = Vec4(0, 0, 0, 1);
+
+	return lookat;
+}
+
+Mat4 Mat4::LookAtDirection(Vec3 dir, Vec3 world_up) {
+	Assert(!IsNull(dir));
+
+	Vec3 forward = dir;
+	Vec3 right = Normalize(CrossProduct(world_up, forward));
+	Vec3 up = CrossProduct(right, forward);
+
+	Mat4 lookat;
+	lookat.rows[0] = Vec4(right.x, up.x, forward.x, 0);
+	lookat.rows[1] = Vec4(right.y, up.y, forward.y, 0);
+	lookat.rows[2] = Vec4(right.z, up.z, forward.z, 0);
+	lookat.rows[3] = Vec4(0, 0, 0, 1);
+
+	return lookat;
+}
+
+Mat4 Mat4::OrthographicProjectionRH(float l, float r, float t, float b, float n, float f) {
+	float iwidth = 1 / (r - l);
+	float iheight = 1 / (t - b);
+	float range = 1 / (n - f);
+
+	Mat4  m;
+	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
+	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
+	m.rows[2] = Vec4(0.0f, 0.0f, range, -n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::OrthographicProjectionLH(float l, float r, float t, float b, float n, float f) {
+	float iwidth = 1 / (r - l);
+	float iheight = 1 / (t - b);
+	float range = 1 / (f - n);
+
+	Mat4  m;
+	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
+	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
+	m.rows[2] = Vec4(0.0f, 0.0f, range, -n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	return m;
+}
+
+Mat4 Mat4::PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f) {
+	float height = 1.0f / MathTan(fov * 0.5f);
+	float width = height / aspect_ratio;
+	float range = 1 / (n - f);
+
+	Mat4  m;
+	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
+	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
+	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, -1.0f, 0.0f);
+	return m;
+}
+
+Mat4 Mat4::PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f) {
+	float height = 1.0f / MathTan(fov * 0.5f);
+	float width = height / aspect_ratio;
+	float range = 1 / (f - n);
+
+	Mat4  m;
+	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
+	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
+	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
+	m.rows[3] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
 	return m;
 }
 
@@ -33,14 +254,6 @@ Mat2 Transpose(const Mat2 &m) {
 	t.m2[1][0] = m.m2[0][1];
 	t.m2[1][1] = m.m2[1][1];
 	return t;
-}
-
-Mat3 IdentityMat3() {
-	Mat3 m;
-	m.rows[0] = Vec3(1.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec3(0.0f, 1.0f, 0.0f);
-	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
-	return m;
 }
 
 float Determinant(const Mat3 &mat) {
@@ -75,15 +288,6 @@ Mat3 Transpose(const Mat3 &m) {
 	res.rows[1] = Vec3(m.m2[0][1], m.m2[1][1], m.m2[2][1]);
 	res.rows[2] = Vec3(m.m2[0][2], m.m2[1][2], m.m2[2][2]);
 	return res;
-}
-
-Mat4 IdentityMat4() {
-	Mat4 m;
-	m.rows[0] = Vec4(1.0f, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
 }
 
 float Determinant(const Mat4 &mat) {
@@ -196,15 +400,15 @@ Mat2 operator*(const Mat2 &left, const Mat2 &right) {
 
 Vec2 operator*(const Mat2 &mat, Vec2 vec) {
 	Vec2 res;
-	res.m[0] = DotProduct(vec, mat.rows[0]);
-	res.m[1] = DotProduct(vec, mat.rows[1]);
+	res[0] = DotProduct(vec, mat.rows[0]);
+	res[1] = DotProduct(vec, mat.rows[1]);
 	return res;
 }
 
 Vec2 operator*(Vec2 vec, const Mat2 &mat) {
 	Vec2 res;
-	res.m[0] = DotProduct(vec, Vec2(mat.m2[0][0], mat.m2[1][0]));
-	res.m[1] = DotProduct(vec, Vec2(mat.m2[0][1], mat.m2[1][1]));
+	res[0] = DotProduct(vec, Vec2(mat.m2[0][0], mat.m2[1][0]));
+	res[1] = DotProduct(vec, Vec2(mat.m2[0][1], mat.m2[1][1]));
 	return res;
 }
 
@@ -229,9 +433,9 @@ Mat3 operator*(const Mat3 &left, const Mat3 &right) {
 
 Vec3 operator*(const Mat3 &mat, Vec3 vec) {
 	Vec3 res;
-	res.m[0] = DotProduct(vec, mat.rows[0]);
-	res.m[1] = DotProduct(vec, mat.rows[1]);
-	res.m[2] = DotProduct(vec, mat.rows[2]);
+	res[0] = DotProduct(vec, mat.rows[0]);
+	res[1] = DotProduct(vec, mat.rows[1]);
+	res[2] = DotProduct(vec, mat.rows[2]);
 	return res;
 }
 
@@ -264,244 +468,16 @@ Mat4 operator*(const Mat4 &left, const Mat4 &right) {
 
 Vec4 operator*(const Mat4 &mat, Vec4 vec) {
 	Vec4 res;
-	res.m[0] = DotProduct(vec, mat.rows[0]);
-	res.m[1] = DotProduct(vec, mat.rows[1]);
-	res.m[2] = DotProduct(vec, mat.rows[2]);
-	res.m[3] = DotProduct(vec, mat.rows[3]);
+	res[0] = DotProduct(vec, mat.rows[0]);
+	res[1] = DotProduct(vec, mat.rows[1]);
+	res[2] = DotProduct(vec, mat.rows[2]);
+	res[3] = DotProduct(vec, mat.rows[3]);
 	return res;
 }
 
 //
 //
 //
-
-Mat2 ScalarMat2(float x, float y) {
-	Mat2 m;
-	m.rows[0] = Vec2(x, 0.0f);
-	m.rows[1] = Vec2(0.0f, y);
-	return m;
-}
-
-Mat2 ScalarMat2(Vec2 s) {
-	Mat2 m;
-	m.rows[0] = Vec2(s.x, 0.0f);
-	m.rows[1] = Vec2(0.0f, s.y);
-	return m;
-}
-
-Mat2 RotationMat2(float angle) {
-	float c = MathCos(angle);
-	float s = MathSin(angle);
-
-	Mat2  mat;
-	mat.rows[0] = Vec2(c, -s);
-	mat.rows[1] = Vec2(s, c);
-	return mat;
-}
-
-Mat3 ScalarMat3(float S_1, float S_2) {
-	Mat3 m;
-	m.rows[0] = Vec3(S_1, 0.0f, 0.0f);
-	m.rows[1] = Vec3(0.0f, S_2, 0.0f);
-	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat3 ScalarMat3(Vec2 s) {
-	return ScalarMat3(s.x, s.y);
-}
-
-Mat3 TranslationMat3(float T_x, float T_y) {
-	Mat3 m;
-	m.rows[0] = Vec3(1.0f, 0.0f, T_x);
-	m.rows[1] = Vec3(0.0f, 1.0f, T_y);
-	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat3 TranslationMat3(Vec2 t) {
-	return TranslationMat3(t.x, t.y);
-}
-
-Mat3 RotationMat3(float angle) {
-	Mat3  m;
-	float c = MathCos(angle);
-	float s = MathSin(angle);
-	m.rows[0] = Vec3(c, -s, 0.0f);
-	m.rows[1] = Vec3(s, c, 0.0f);
-	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat3 LookAt(Vec2 from, Vec2 to, Vec2 forward) {
-	Vec2  dir = Normalize(to - from);
-	float cos_theta = DotProduct(dir, forward);
-	float sin_theta = MathSquareRoot(1.0f - cos_theta * cos_theta);
-
-	Mat3  m;
-	m.rows[0] = Vec3(cos_theta, -sin_theta, from.x);
-	m.rows[1] = Vec3(sin_theta, cos_theta, from.y);
-	m.rows[2] = Vec3(0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 ScalarMat4(float S_1, float S_2, float S_3) {
-	Mat4 m;
-	m.rows[0] = Vec4(S_1, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, S_2, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, S_3, 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 ScalarMat4(Vec3 s) {
-	return ScalarMat4(s.x, s.y, s.z);
-}
-
-Mat4 TranslationMat4(float T_x, float T_y, float T_z) {
-	Mat4 m;
-	m.rows[0] = Vec4(1.0f, 0.0f, 0.0f, T_x);
-	m.rows[1] = Vec4(0.0f, 1.0f, 0.0f, T_y);
-	m.rows[2] = Vec4(0.0f, 0.0f, 1.0f, T_z);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 TranslationMat4(Vec3 t) {
-	return TranslationMat4(t.x, t.y, t.z);
-}
-
-Mat4 RotationX(float angle) {
-	Mat4 m;
-	m.rows[0] = Vec4(1.0f, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, MathCos(angle), -MathSin(angle), 0.0f);
-	m.rows[2] = Vec4(0.0f, MathSin(angle), MathCos(angle), 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 RotationY(float angle) {
-	Mat4 m;
-	m.rows[0] = Vec4(MathCos(angle), 0.0f, -MathSin(angle), 0.0f);
-	m.rows[1] = Vec4(0.0f, 1.0f, 0.0f, 0.0f);
-	m.rows[2] = Vec4(MathSin(angle), 0.0f, MathCos(angle), 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 RotationZ(float angle) {
-	Mat4 m;
-	m.rows[0] = Vec4(MathCos(angle), -MathSin(angle), 0.0f, 0.0f);
-	m.rows[1] = Vec4(MathSin(angle), MathCos(angle), 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 RotationMat4(float x, float y, float z, float angle) {
-	float c = MathCos(angle);
-	float s = MathSin(angle);
-
-	float x2 = x * x;
-	float xy = x * y;
-	float zx = x * z;
-	float y2 = y * y;
-	float yz = y * z;
-	float z2 = z * z;
-
-	Mat4  m;
-	m.rows[0] = Vec4(c + x2 * (1 - c), xy * (1 - c) - z * s, zx * (1 - c) + y * s, 0.0f);
-	m.rows[1] = Vec4(xy * (1 - c) + z * s, c + y2 * (1 - c), yz * (1 - c) - x * s, 0.0f);
-	m.rows[2] = Vec4(zx * (1 - c) - y * s, yz * (1 - c) + x * s, c + z2 * (1 - c), 0.0f);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 RotationMat4(Vec3 axis, float angle) {
-	return RotationMat4(axis.x, axis.y, axis.z, angle);
-}
-
-Mat4 LookAt(Vec3 from, Vec3 to, Vec3 world_up) {
-	Vec3 forward = Normalize(from - to);
-	Vec3 right = Normalize(CrossProduct(world_up, forward));
-	Vec3 up = CrossProduct(right, forward);
-
-	Mat4 lookat;
-	lookat.rows[0] = Vec4(right.x, up.x, forward.x, -from.x);
-	lookat.rows[1] = Vec4(right.y, up.y, forward.y, -from.y);
-	lookat.rows[2] = Vec4(right.z, up.z, forward.z, -from.z);
-	lookat.rows[3] = Vec4(0, 0, 0, 1);
-
-	return lookat;
-}
-
-Mat4 LookAtDirection(Vec3 dir, Vec3 world_up) {
-	Assert(!IsNull(dir));
-
-	Vec3 forward = dir;
-	Vec3 right = Normalize(CrossProduct(world_up, forward));
-	Vec3 up = CrossProduct(right, forward);
-
-	Mat4 lookat;
-	lookat.rows[0] = Vec4(right.x, up.x, forward.x, 0);
-	lookat.rows[1] = Vec4(right.y, up.y, forward.y, 0);
-	lookat.rows[2] = Vec4(right.z, up.z, forward.z, 0);
-	lookat.rows[3] = Vec4(0, 0, 0, 1);
-
-	return lookat;
-}
-
-Mat4 OrthographicProjectionRH(float l, float r, float t, float b, float n, float f) {
-	float iwidth = 1 / (r - l);
-	float iheight = 1 / (t - b);
-	float range = 1 / (n - f);
-
-	Mat4  m;
-	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
-	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
-	m.rows[2] = Vec4(0.0f, 0.0f, range, -n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 OrthographicProjectionLH(float l, float r, float t, float b, float n, float f) {
-	float iwidth = 1 / (r - l);
-	float iheight = 1 / (t - b);
-	float range = 1 / (f - n);
-
-	Mat4  m;
-	m.rows[0] = Vec4(2 * iwidth, 0.0f, 0.0f, -(l + r) * iwidth);
-	m.rows[1] = Vec4(0.0f, 2 * iheight, 0.0f, -(t + b) * iheight);
-	m.rows[2] = Vec4(0.0f, 0.0f, range, -n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	return m;
-}
-
-Mat4 PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f) {
-	float height = 1.0f / MathTan(fov * 0.5f);
-	float width = height / aspect_ratio;
-	float range = 1 / (n - f);
-
-	Mat4  m;
-	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, -1.0f, 0.0f);
-	return m;
-}
-
-Mat4 PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f) {
-	float height = 1.0f / MathTan(fov * 0.5f);
-	float width = height / aspect_ratio;
-	float range = 1 / (f - n);
-
-	Mat4  m;
-	m.rows[0] = Vec4(width, 0.0f, 0.0f, 0.0f);
-	m.rows[1] = Vec4(0.0f, height, 0.0f, 0.0f);
-	m.rows[2] = Vec4(0.0f, 0.0f, f * range, -1.0f * f * n * range);
-	m.rows[3] = Vec4(0.0f, 0.0f, 1.0f, 0.0f);
-	return m;
-}
 
 Vec3 GetRight(const Mat4 &m) {
 	Vec3 v;
@@ -529,8 +505,8 @@ Vec3 GetForward(const Mat4 &m) {
 
 Mat2 ToMat2(const Mat3 &mat) {
 	Mat2 result;
-	result.rows[0] = mat.rows[0].xy;
-	result.rows[1] = mat.rows[1].xy;
+	result.rows[0] = Vec2(mat.rows[0].x, mat.rows[0].y);
+	result.rows[1] = Vec2(mat.rows[1].x, mat.rows[1].y);
 	return result;
 }
 
@@ -544,9 +520,9 @@ Mat3 ToMat3(const Mat2 &mat) {
 
 Mat3 ToMat3(const Mat4 &mat) {
 	Mat3 result;
-	result.rows[0] = mat.rows[0].xyz;
-	result.rows[1] = mat.rows[1].xyz;
-	result.rows[2] = mat.rows[2].xyz;
+	result.rows[0] = Vec3(mat.rows[0].x, mat.rows[0].y, mat.rows[0].z);
+	result.rows[1] = Vec3(mat.rows[1].x, mat.rows[1].y, mat.rows[1].z);
+	result.rows[2] = Vec3(mat.rows[2].x, mat.rows[2].y, mat.rows[2].z);
 	return result;
 }
 
@@ -568,7 +544,7 @@ Quat IdentityQuat() {
 }
 
 float DotProduct(Quat q1, Quat q2) {
-	return q1.real * q2.real + q1.i * q2.i + q1.j * q2.j + q1.k * q2.k;
+	return DotProduct(q1.v4, q2.v4);
 }
 
 float Length(Quat q) {
@@ -582,25 +558,25 @@ Quat Normalize(Quat q) {
 }
 
 Quat Conjugate(Quat q) {
-	return Quat(-q.i, -q.j, -q.k, q.real);
+	return Quat(-q.m[0], -q.m[1], -q.m[2], q.m[3]);
 }
 
 Quat operator*(Quat q1, Quat q2) {
-	float a = q1.w;
-	float b = q1.x;
-	float c = q1.y;
-	float d = q1.z;
+	float a = q1.v4.w;
+	float b = q1.v4.x;
+	float c = q1.v4.y;
+	float d = q1.v4.z;
 
-	float e = q2.w;
-	float f = q2.x;
-	float g = q2.y;
-	float h = q2.z;
+	float e = q2.v4.w;
+	float f = q2.v4.x;
+	float g = q2.v4.y;
+	float h = q2.v4.z;
 
 	Quat  res;
-	res.w = a * e - b * f - c * g - d * h;
-	res.x = a * f + b * e + c * h - d * g;
-	res.y = a * g - b * h + c * e + d * f;
-	res.z = a * h + b * g - c * f + d * e;
+	res.v4.w = a * e - b * f - c * g - d * h;
+	res.v4.x = a * f + b * e + c * h - d * g;
+	res.v4.y = a * g - b * h + c * e + d * f;
+	res.v4.z = a * h + b * g - c * f + d * e;
 	return res;
 }
 
@@ -608,7 +584,7 @@ Vec3 Rotate(Quat q, Vec3 v) {
 	Quat p = Quat(v.x, v.y, v.z, 0);
 	Quat qc = Conjugate(q);
 	Quat res = (q * p * qc);
-	return Vec3(res.x, res.y, res.z);
+	return Vec3(res.v4.x, res.v4.y, res.v4.z);
 }
 
 Quat QuatFromAngleAxis(Vec3 axis, float angle) {
@@ -625,13 +601,13 @@ Quat QuatFromAngleAxisNormalized(Vec3 axis, float angle) {
 }
 
 void GetAngleAxis(Quat q, float *angle, Vec3 *axis) {
-	float len = MathSquareRoot(q.i * q.i + q.j * q.j + q.k * q.k);
+	float len = MathSquareRoot(q.m[0] * q.m[0] + q.m[1] * q.m[1] + q.m[2] * q.m[2]);
 	if (len) {
-		*angle = 2.0f * MathArcTan2(len, q.real);
+		*angle = 2.0f * MathArcTan2(len, q.m[3]);
 		len = 1.0f / len;
-		axis->x = q.i * len;
-		axis->y = q.j * len;
-		axis->z = q.k * len;
+		axis->x = q.m[0] * len;
+		axis->y = q.m[1] * len;
+		axis->z = q.m[2] * len;
 	}
 	else {
 		// degenerate case, unit quaternion
@@ -659,32 +635,32 @@ Quat QuatFromMat4(const Mat4 &m) {
 	float trace = m.m2[0][0] + m.m2[1][1] + m.m2[2][2];
 	if (trace > 0.0f) {
 		float s = 0.5f / MathSquareRoot(trace + 1.0f);
-		q.w = 0.25f / s;
-		q.x = (m.m2[2][1] - m.m2[1][2]) * s;
-		q.y = (m.m2[0][2] - m.m2[2][0]) * s;
-		q.z = (m.m2[1][0] - m.m2[0][1]) * s;
+		q.v4.w = 0.25f / s;
+		q.v4.x = (m.m2[2][1] - m.m2[1][2]) * s;
+		q.v4.y = (m.m2[0][2] - m.m2[2][0]) * s;
+		q.v4.z = (m.m2[1][0] - m.m2[0][1]) * s;
 	}
 	else {
 		if (m.m2[0][0] > m.m2[1][1] && m.m2[0][0] > m.m2[2][2]) {
 			float s = 2.0f * MathSquareRoot(1.0f + m.m2[0][0] - m.m2[1][1] - m.m2[2][2]);
-			q.w = (m.m2[2][1] - m.m2[1][2]) / s;
-			q.x = 0.25f * s;
-			q.y = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.z = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.v4.w = (m.m2[2][1] - m.m2[1][2]) / s;
+			q.v4.x = 0.25f * s;
+			q.v4.y = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.v4.z = (m.m2[0][2] + m.m2[2][0]) / s;
 		}
 		else if (m.m2[1][1] > m.m2[2][2]) {
 			float s = 2.0f * MathSquareRoot(1.0f + m.m2[1][1] - m.m2[0][0] - m.m2[2][2]);
-			q.w = (m.m2[0][2] - m.m2[2][0]) / s;
-			q.x = (m.m2[0][1] + m.m2[1][0]) / s;
-			q.y = 0.25f * s;
-			q.z = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.v4.w = (m.m2[0][2] - m.m2[2][0]) / s;
+			q.v4.x = (m.m2[0][1] + m.m2[1][0]) / s;
+			q.v4.y = 0.25f * s;
+			q.v4.z = (m.m2[1][2] + m.m2[2][1]) / s;
 		}
 		else {
 			float s = 2.0f * MathSquareRoot(1.0f + m.m2[2][2] - m.m2[0][0] - m.m2[1][1]);
-			q.w = (m.m2[1][0] - m.m2[0][1]) / s;
-			q.x = (m.m2[0][2] + m.m2[2][0]) / s;
-			q.y = (m.m2[1][2] + m.m2[2][1]) / s;
-			q.z = 0.25f * s;
+			q.v4.w = (m.m2[1][0] - m.m2[0][1]) / s;
+			q.v4.x = (m.m2[0][2] + m.m2[2][0]) / s;
+			q.v4.y = (m.m2[1][2] + m.m2[2][1]) / s;
+			q.v4.z = 0.25f * s;
 		}
 	}
 	return Normalize(q);
@@ -692,18 +668,18 @@ Quat QuatFromMat4(const Mat4 &m) {
 
 Quat QuatFromMat4Nomalized(const Mat4 &m) {
 	Mat4 nm;
-	nm.rows[0] = Vec4(Normalize(m.rows[0].xyz), m.rows[0].w);
-	nm.rows[1] = Vec4(Normalize(m.rows[1].xyz), m.rows[1].w);
-	nm.rows[2] = Vec4(Normalize(m.rows[2].xyz), m.rows[2].w);
-	nm.rows[3] = Vec4(Normalize(m.rows[3].xyz), m.rows[3].w);
+	nm.rows[0] = Vec4(Normalize(VecXYZ(m.rows[0])), m.rows[0].w);
+	nm.rows[1] = Vec4(Normalize(VecXYZ(m.rows[1])), m.rows[1].w);
+	nm.rows[2] = Vec4(Normalize(VecXYZ(m.rows[2])), m.rows[2].w);
+	nm.rows[3] = Vec4(Normalize(VecXYZ(m.rows[3])), m.rows[3].w);
 	return QuatFromMat4(nm);
 }
 
 Mat4 GetMat4(Quat q) {
-	float i = q.i;
-	float j = q.j;
-	float k = q.k;
-	float r = q.real;
+	float i = q.m[0];
+	float j = q.m[1];
+	float k = q.m[2];
+	float r = q.m[3];
 
 	float ii = i * i;
 	float jj = j * j;
@@ -743,25 +719,25 @@ Mat4 GetMat4(Quat q) {
 
 Vec3 GetForward(Quat q) {
 	Vec3 up;
-	up.x = 2 * (q.i * q.k + q.j * q.real);
-	up.y = 2 * (q.j * q.k - q.i * q.real);
-	up.z = 1 - 2 * (q.i * q.i + q.j * q.j);
+	up.x = 2 * (q.m[0] * q.m[2] + q.m[1] * q.m[3]);
+	up.y = 2 * (q.m[1] * q.m[2] - q.m[0] * q.m[3]);
+	up.z = 1 - 2 * (q.m[0] * q.m[0] + q.m[1] * q.m[1]);
 	return Normalize(up);
 }
 
 Vec3 GetRight(Quat q) {
 	Vec3 right;
-	right.x = 1 - 2 * (q.j * q.j + q.k * q.k);
-	right.y = 2 * (q.i * q.j + q.k * q.real);
-	right.z = 2 * (q.i * q.k - q.j * q.real);
+	right.x = 1 - 2 * (q.m[1] * q.m[1] + q.m[2] * q.m[2]);
+	right.y = 2 * (q.m[0] * q.m[1] + q.m[2] * q.m[3]);
+	right.z = 2 * (q.m[0] * q.m[2] - q.m[1] * q.m[3]);
 	return Normalize(right);
 }
 
 Vec3 GetUp(Quat q) {
 	Vec3 forward;
-	forward.x = 2 * (q.i * q.j - q.k * q.real);
-	forward.y = 1 - 2 * (q.i * q.i + q.k * q.k);
-	forward.z = 2 * (q.j * q.k + q.i * q.real);
+	forward.x = 2 * (q.m[0] * q.m[1] - q.m[2] * q.m[3]);
+	forward.y = 1 - 2 * (q.m[0] * q.m[0] + q.m[2] * q.m[2]);
+	forward.z = 2 * (q.m[1] * q.m[2] + q.m[0] * q.m[3]);
 	return Normalize(forward);
 }
 
@@ -774,10 +750,10 @@ Quat QuatFromEulerAngles(float pitch, float yaw, float roll) {
 	float sr = MathSin(pitch * 0.5f);
 
 	Quat  q;
-	q.w = cy * cp * cr + sy * sp * sr;
-	q.x = cy * cp * sr - sy * sp * cr;
-	q.y = sy * cp * sr + cy * sp * cr;
-	q.z = sy * cp * cr - cy * sp * sr;
+	q.v4.w = cy * cp * cr + sy * sp * sr;
+	q.v4.x = cy * cp * sr - sy * sp * cr;
+	q.v4.y = sy * cp * sr + cy * sp * cr;
+	q.v4.z = sy * cp * cr - cy * sp * sr;
 	return q;
 }
 
@@ -788,11 +764,11 @@ Quat QuatFromEulerAngles(Vec3 euler) {
 Vec3 GetEulerAngles(Quat q) {
 	Vec3  angles;
 
-	float sinr_cosp = 2.0f * (q.w * q.x + q.y * q.z);
-	float cosr_cosp = 1.0f - 2.0f * (q.x * q.x + q.y * q.y);
+	float sinr_cosp = 2.0f * (q.v4.w * q.v4.x + q.v4.y * q.v4.z);
+	float cosr_cosp = 1.0f - 2.0f * (q.v4.x * q.v4.x + q.v4.y * q.v4.y);
 	angles.z = MathArcTan2(sinr_cosp, cosr_cosp);
 
-	float sinp = 2.0f * (q.w * q.y - q.z * q.x);
+	float sinp = 2.0f * (q.v4.w * q.v4.y - q.v4.z * q.v4.x);
 	if (MathAbsolute(sinp) >= 1.0f) {
 		// use 90 degrees if out of range
 		angles.x = MathCopySign(PI / 2, sinp);
@@ -801,8 +777,8 @@ Vec3 GetEulerAngles(Quat q) {
 		angles.x = MathArcSin(sinp);
 	}
 
-	float siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
-	float cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);
+	float siny_cosp = 2.0f * (q.v4.w * q.v4.z + q.v4.x * q.v4.y);
+	float cosy_cosp = 1.0f - 2.0f * (q.v4.y * q.v4.y + q.v4.z * q.v4.z);
 	angles.y = MathArcTan2(siny_cosp, cosy_cosp);
 
 	return angles;
@@ -810,14 +786,14 @@ Vec3 GetEulerAngles(Quat q) {
 
 Quat QuatBetween(Vec3 from, Vec3 to) {
 	Quat q;
-	q.v4.w = 1.0f + DotProduct(from, to);
+	float w = 1.0f + DotProduct(from, to);
 
-	if (q.real) {
-		q.v4.xyz = CrossProduct(from, to);
+	if (q.m[3]) {
+		q.v4 = Vec4(CrossProduct(from, to), w);
 	}
 	else {
-		q.v4.xyz =
-			MathAbsolute(from.x) > MathAbsolute(from.z) ? Vec3(-from.y, from.x, 0.f) : Vec3(0.f, -from.z, from.y);
+		Vec3 xyz = MathAbsolute(from.x) > MathAbsolute(from.z) ? Vec3(-from.y, from.x, 0.f) : Vec3(0.f, -from.z, from.y);
+		q.v4 = Vec4(xyz, w);
 	}
 
 	return Normalize(q);
@@ -848,9 +824,7 @@ Vec3 LinearToSrgb(Vec3 color) {
 }
 
 Vec4 LinearToSrgb(Vec4 color) {
-	Vec4 res;
-	res.xyz = LinearToSrgb(color.xyz);
-	res.w = color.w;
+	Vec4 res = Vec4(LinearToSrgb(VecXYZ(color)), color.w);
 	return res;
 }
 
@@ -864,9 +838,7 @@ Vec3 LinearToSrgb(Vec3 color, float gamma) {
 }
 
 Vec4 LinearToSrgb(Vec4 color, float gamma) {
-	Vec4 res;
-	res.xyz = LinearToSrgb(color.xyz, gamma);
-	res.w = color.w;
+	Vec4 res = Vec4(LinearToSrgb(VecXYZ(color), gamma), color.w);
 	return res;
 }
 
@@ -878,9 +850,7 @@ Vec3 SrgbToLinear(Vec3 color) {
 }
 
 Vec4 SrgbToLinear(Vec4 color) {
-	Vec4 res;
-	res.xyz = SrgbToLinear(color.xyz);
-	res.w = color.w;
+	Vec4 res = Vec4(SrgbToLinear(VecXYZ(color)), color.w);
 	return res;
 }
 
@@ -893,9 +863,7 @@ Vec3 SrgbToLinear(Vec3 color, float gamma) {
 }
 
 Vec4 SrgbToLinear(Vec4 color, float gamma) {
-	Vec4 res;
-	res.xyz = SrgbToLinear(color.xyz, gamma);
-	res.w = color.w;
+	Vec4 res = Vec4(SrgbToLinear(VecXYZ(color), gamma), color.w);
 	return res;
 }
 
@@ -974,11 +942,11 @@ Vec3 RgbToHsv(Vec3 c) {
 }
 
 Vec4 HsvToRgb(Vec4 c) {
-	return Vec4(HsvToRgb(c.xyz), c.w);
+	return Vec4(HsvToRgb(VecXYZ(c)), c.w);
 }
 
 Vec4 RgbToHsv(Vec4 c) {
-	return Vec4(RgbToHsv(c.xyz), c.w);
+	return Vec4(RgbToHsv(VecXYZ(c)), c.w);
 }
 
 //

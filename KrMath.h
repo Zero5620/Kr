@@ -10,118 +10,124 @@ constexpr float REAL_EPSILON = FLT_EPSILON;
 constexpr float REAL_MAX = FLT_MAX;
 constexpr float REAL_MIN = FLT_MIN;
 
-union Vec2 {
-	struct {
-		float x, y;
-	};
-	float m[2];
-	Vec2() {
-	}
-	Vec2(float a) : x(a), y(a) {
-	}
-	Vec2(float a, float b) : x(a), y(b) {
-	}
+struct Vec2 {
+	float x, y;
+	Vec2() {}
+	Vec2(float a) : x(a), y(a) {}
+	Vec2(float a, float b) : x(a), y(b) {}
+	float &operator[](int index) { return ((float *)&x)[index]; }
+	const float &operator[](int index) const { return ((float *)&x)[index]; }
 };
 
-union Vec3 {
-	struct {
-		float x, y, z;
-	};
-	struct {
-		Vec2  xy;
-		float _z;
-	};
-	struct {
-		float _x;
-		Vec2  yz;
-	};
-	float m[3];
-	Vec3() {
-	}
-	Vec3(float a) : x(a), y(a), z(a) {
-	}
-	Vec3(float a, float b, float c) : x(a), y(b), z(c) {
-	}
-	Vec3(Vec2 ab, float c) : xy(ab), _z(c) {
-	}
-	Vec3(float a, Vec2 cd) : _x(a), yz(cd) {
-	}
+struct Vec3 {
+	float x, y, z;
+	Vec3() {}
+	Vec3(float a) : x(a), y(a), z(a) {}
+	Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
+	Vec3(Vec2 ab, float c) : x(ab.x), y(ab.y), z(c) {}
+	Vec3(float a, Vec2 cd) : x(a), y(cd.x), z(cd.y) {}
+	float &operator[](int index) { return ((float *)&x)[index]; }
+	const float &operator[](int index) const { return ((float *)&x)[index]; }
 };
 
-union Vec4 {
-	struct {
-		float x, y, z, w;
-	};
-	struct {
-		Vec2 xy, zw;
-	};
-	struct {
-		Vec3  xyz;
-		float _w;
-	};
-	struct {
-		float _x;
-		Vec3  yzw;
-	};
-	float m[4];
-	Vec4() {
-	}
-	Vec4(float a) : x(a), y(a), z(a), w(a) {
-	}
-	Vec4(float a, float b, float c, float d) : x(a), y(b), z(c), w(d) {
-	}
-	Vec4(Vec2 ab, Vec2 cd) : xy(ab), zw(cd) {
-	}
-	Vec4(Vec3 abc, float d) : xyz(abc), _w(d) {
-	}
-	Vec4(float a, Vec3 bcd) : _x(a), yzw(bcd) {
-	}
+struct Vec4 {
+	float x, y, z, w;
+	Vec4() {}
+	Vec4(float a) : x(a), y(a), z(a), w(a) {}
+	Vec4(float a, float b, float c, float d) : x(a), y(b), z(c), w(d) {}
+	Vec4(Vec2 ab, Vec2 cd): x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
+	Vec4(Vec3 abc, float d): x(abc.x), y(abc.y), z(abc.z), w(d) {}
+	Vec4(float a, Vec3 bcd): x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
+	float &operator[](int index) { return ((float *)&x)[index]; }
+	const float &operator[](int index) const { return ((float *)&x)[index]; }
 };
+
+#define VecXY(v)  Vec2((v).x, (v).y)
+#define VecYZ(v)  Vec2((v).y, (v).z)
+#define VecXYZ(v) Vec3((v).x, (v).y, (v).z)
+#define VecYZW(v) Vec3((v).y, (v).z, (v).w)
 
 union Mat2 {
 	Vec2  rows[2];
 	float m[4];
 	float m2[2][2];
-	inline Mat2() {
+	inline Mat2() {}
+	inline Mat2(Vec2 a, Vec2 b) : rows{ a, b } {}
+
+	inline Mat2(float a) {
+		rows[0] = Vec2(a, 0);
+		rows[1] = Vec2(0, a);
 	}
-	inline Mat2(Vec2 a, Vec2 b) : rows{ a, b } {
-	}
+
+	static inline Mat2 Identity() { return Mat2(1); }
+	static Mat2 Scalar(float x, float y);
+	static Mat2 Scalar(Vec2 s);
+	static Mat2 Rotation(float angle);
 };
 
 union Mat3 {
 	Vec3  rows[3];
 	float m[9];
 	float m2[3][3];
-	inline Mat3() {
+	inline Mat3() {}
+	inline Mat3(Vec3 a, Vec3 b, Vec3 c) : rows{ a, b, c } {}
+
+	inline Mat3(float a) {
+		rows[0] = Vec3(a, 0, 0);
+		rows[1] = Vec3(0, a, 0);
+		rows[2] = Vec3(0, 0, a);
 	}
-	inline Mat3(Vec3 a, Vec3 b, Vec3 c) : rows{ a, b, c } {
-	}
+
+	static inline Mat3 Identity() { return Mat3(1); }
+	static Mat3 Scalar(float S_1, float S_2);
+	static Mat3 Scalar(Vec2 s);
+	static Mat3 Translation(float T_x, float T_y);
+	static Mat3 Translation(Vec2 t);
+	static Mat3 Rotation(float angle);
+	static Mat3 LookAt(Vec2 from, Vec2 to, Vec2 forward);
 };
 
 union Mat4 {
 	Vec4  rows[4];
 	float m[16];
 	float m2[4][4];
-	inline Mat4() {
+	inline Mat4() {}
+	inline Mat4(Vec4 a, Vec4 b, Vec4 c, Vec4 d) : rows{ a, b, c, d } {}
+
+	inline Mat4(float a) {
+		rows[0] = Vec4(a, 0, 0, 0);
+		rows[1] = Vec4(0, a, 0, 0);
+		rows[2] = Vec4(0, 0, a, 0);
+		rows[3] = Vec4(0, 0, 0, a);
 	}
-	inline Mat4(Vec4 a, Vec4 b, Vec4 c, Vec4 d) : rows{ a, b, c, d } {
-	}
+
+	static inline Mat4 Identity() { return Mat4(1); }
+	static Mat4 LookAtDirection(Vec3 dir, Vec3 world_up);
+	static Mat4 Scalar(float S_1, float S_2, float S_3);
+	static Mat4 Scalar(Vec3 s);
+	static Mat4 Translation(float T_x, float T_y, float T_z);
+	static Mat4 Translation(Vec3 t);
+	static Mat4 RotationX(float angle);
+	static Mat4 RotationY(float angle);
+	static Mat4 RotationZ(float angle);
+	static Mat4 Rotation(float x, float y, float z, float angle);
+	static Mat4 Rotation(Vec3 axis, float angle);
+	static Mat4 LookAt(Vec3 from, Vec3 to, Vec3 world_up);
+	static Mat4 OrthographicProjectionRH(float l, float r, float t, float b, float n, float f);
+	static Mat4 OrthographicProjectionLH(float l, float r, float t, float b, float n, float f);
+	static Mat4 PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f);
+	static Mat4 PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f);
 };
 
 union Quat {
+	Vec4  v4;
 	float m[4];
-	struct {
-		float x, y, z, w;
-	};
-	struct {
-		float i, j, k, real;
-	};
-	struct {
-		Vec4 v4;
-	};
-	Quat() {
-	}
-	Quat(Vec4 v) : v4(v) {
+	Quat() {}
+	Quat(Vec4 v) {
+		m[0] = v.x;
+		m[1] = v.y;
+		m[2] = v.z;
+		m[3] = v.w;
 	}
 	Quat(float b, float c, float d, float a) {
 		m[0] = b;
@@ -130,6 +136,10 @@ union Quat {
 		m[3] = a;
 	}
 };
+
+#define FmtVec2 "[%f, %f]"
+#define FmtVec3 "[%f, %f, %f]"
+#define FmtVec4 "[%f, %f, %f, %f]"
 
 #define ExpandVec2(v) (v).x, (v).y
 #define ExpandVec3(v) (v).x, (v).y, (v).z
@@ -413,42 +423,42 @@ INLINE_PROCEDURE float Distance(Vec4 a, Vec4 b) {
 }
 
 INLINE_PROCEDURE Vec2 NormalizeChecked(Vec2 v) {
-	Vec2  res = {};
+	Vec2  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v / len;
 	return res;
 }
 INLINE_PROCEDURE Vec3 NormalizeChecked(Vec3 v) {
-	Vec3  res = {};
+	Vec3  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v / len;
 	return res;
 }
 INLINE_PROCEDURE Vec4 NormalizeChecked(Vec4 v) {
-	Vec4  res = {};
+	Vec4  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v * (1.0f / len);
 	return res;
 }
 INLINE_PROCEDURE Vec2 Normalize(Vec2 v) {
-	Vec2  res = {};
+	Vec2  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v / len;
 	return res;
 }
 INLINE_PROCEDURE Vec3 Normalize(Vec3 v) {
-	Vec3  res = {};
+	Vec3  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v / len;
 	return res;
 }
 INLINE_PROCEDURE Vec4 Normalize(Vec4 v) {
-	Vec4  res = {};
+	Vec4  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v * (1.0f / len);
@@ -527,15 +537,12 @@ INLINE_PROCEDURE Vec4 ClampVec(Vec4 min, Vec4 max, Vec4 v) {
 	return v;
 }
 
-Mat2         IdentityMat2();
 float        Determinant(const Mat2 &mat);
 Mat2         Inverse(const Mat2 &mat);
 Mat2         Transpose(const Mat2 &m);
-Mat3         IdentityMat3();
 float        Determinant(const Mat3 &mat);
 Mat3         Inverse(const Mat3 &mat);
 Mat3         Transpose(const Mat3 &m);
-Mat4         IdentityMat4();
 float        Determinant(const Mat4 &mat);
 Mat4         Inverse(const Mat4 &mat);
 Mat4         Transpose(const Mat4 &m);
@@ -565,30 +572,6 @@ INLINE_PROCEDURE Mat4 &operator*=(Mat4 &t, Mat4 &o) {
 //
 //
 
-Mat2        ScalarMat2(float x, float y);
-Mat2        ScalarMat2(Vec2 s);
-Mat2        RotationMat2(float angle);
-Mat3        ScalarMat3(float S_1, float S_2);
-Mat3        ScalarMat3(Vec2 s);
-Mat3        TranslationMat3(float T_x, float T_y);
-Mat3        TranslationMat3(Vec2 t);
-Mat3        RotationMat3(float angle);
-Mat3        LookAt(Vec2 from, Vec2 to, Vec2 forward);
-Mat4        LookAtDirection(Vec3 dir, Vec3 world_up);
-Mat4        ScalarMat4(float S_1, float S_2, float S_3);
-Mat4        ScalarMat4(Vec3 s);
-Mat4        TranslationMat4(float T_x, float T_y, float T_z);
-Mat4        TranslationMat4(Vec3 t);
-Mat4        RotationX(float angle);
-Mat4        RotationY(float angle);
-Mat4        RotationZ(float angle);
-Mat4        RotationMat4(float x, float y, float z, float angle);
-Mat4        RotationMat4(Vec3 axis, float angle);
-Mat4        LookAt(Vec3 from, Vec3 to, Vec3 world_up);
-Mat4        OrthographicProjectionRH(float l, float r, float t, float b, float n, float f);
-Mat4        OrthographicProjectionLH(float l, float r, float t, float b, float n, float f);
-Mat4        PerspectiveProjectionRH(float fov, float aspect_ratio, float n, float f);
-Mat4        PerspectiveProjectionLH(float fov, float aspect_ratio, float n, float f);
 Vec3        GetRight(const Mat4 &m);
 Vec3        GetUp(const Mat4 &m);
 Vec3        GetForward(const Mat4 &m);

@@ -1,6 +1,7 @@
 #include "KrCommon.h"
 
 #include <string.h>
+#include <stdio.h>
 
 thread_local Thread_Context ThreadContext;
 
@@ -292,7 +293,9 @@ void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_si
 	}
 }
 
-void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {}
+void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
+	vfscanf(level != LOG_LEVEL_ERROR ? stdout : stderr, fmt, args);
+}
 
 void DefaultFatalErrorProc(const char *message) {
 	LogErrorEx("Fatal Error", message);

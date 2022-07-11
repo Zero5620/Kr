@@ -10,13 +10,19 @@ constexpr float REAL_EPSILON = FLT_EPSILON;
 constexpr float REAL_MAX = FLT_MAX;
 constexpr float REAL_MIN = FLT_MIN;
 
+#ifdef MATH_SANITY_CHECK
+#define MathAssert Assert
+#else
+#define MathAssert(x)
+#endif
+
 struct Vec2 {
 	float x, y;
 	Vec2() {}
 	Vec2(float a) : x(a), y(a) {}
 	Vec2(float a, float b) : x(a), y(b) {}
-	float &operator[](int index) { return ((float *)&x)[index]; }
-	const float &operator[](int index) const { return ((float *)&x)[index]; }
+	float &operator[](int index) { MathAssert(index < 2); return ((float *)&x)[index]; }
+	const float &operator[](int index) const { MathAssert(index < 2); return ((float *)&x)[index]; }
 };
 
 struct Vec3 {
@@ -26,8 +32,8 @@ struct Vec3 {
 	Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
 	Vec3(Vec2 ab, float c) : x(ab.x), y(ab.y), z(c) {}
 	Vec3(float a, Vec2 cd) : x(a), y(cd.x), z(cd.y) {}
-	float &operator[](int index) { return ((float *)&x)[index]; }
-	const float &operator[](int index) const { return ((float *)&x)[index]; }
+	float &operator[](int index) { MathAssert(index < 3); return ((float *)&x)[index]; }
+	const float &operator[](int index) const { MathAssert(index < 3); return ((float *)&x)[index]; }
 };
 
 struct Vec4 {
@@ -38,8 +44,8 @@ struct Vec4 {
 	Vec4(Vec2 ab, Vec2 cd): x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
 	Vec4(Vec3 abc, float d): x(abc.x), y(abc.y), z(abc.z), w(d) {}
 	Vec4(float a, Vec3 bcd): x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
-	float &operator[](int index) { return ((float *)&x)[index]; }
-	const float &operator[](int index) const { return ((float *)&x)[index]; }
+	float &operator[](int index) { MathAssert(index < 4); return ((float *)&x)[index]; }
+	const float &operator[](int index) const { MathAssert(index < 4); return ((float *)&x)[index]; }
 };
 
 #define VecXY(v)  Vec2((v).x, (v).y)

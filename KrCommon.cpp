@@ -294,7 +294,7 @@ void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_si
 }
 
 void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
-	vfscanf(level != LOG_LEVEL_ERROR ? stdout : stderr, fmt, args);
+	vfprintf(level != LOG_LEVEL_ERROR ? stdout : stderr, fmt, args);
 }
 
 void DefaultFatalErrorProc(const char *message) {

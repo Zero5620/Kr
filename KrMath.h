@@ -179,333 +179,333 @@ union Quat {
 #define MathSquare(x) ((x) * (x))
 #define MathFloor(x) floorf(x)
 
-INLINE_PROCEDURE float WrapFloat(float min, float a, float max) {
+inproc float WrapFloat(float min, float a, float max) {
 	float range = max - min;
 	float offset = a - min;
 	float result = (offset - (MathFloor(offset / range) * range) + min);
 	return result;
 }
 
-INLINE_PROCEDURE Vec2 Arm(float angle) {
+inproc Vec2 Arm(float angle) {
 	return Vec2(MathCos(angle), MathSin(angle));
 }
-INLINE_PROCEDURE Vec2 ArmInverse(float angle) {
+inproc Vec2 ArmInverse(float angle) {
 	return Vec2(MathSin(angle), MathCos(angle));
 }
 
-INLINE_PROCEDURE Vec2 MinimumVec(Vec2 a, Vec2 b) {
+inproc Vec2 MinimumVec(Vec2 a, Vec2 b) {
 	return Vec2{ Minimum(a.x, b.x), Minimum(a.y, b.y) };
 }
-INLINE_PROCEDURE Vec2 MaximumVec(Vec2 a, Vec2 b) {
+inproc Vec2 MaximumVec(Vec2 a, Vec2 b) {
 	return Vec2{ Maximum(a.x, b.x), Maximum(a.y, b.y) };
 }
-INLINE_PROCEDURE Vec3 MinimumVec(Vec3 a, Vec3 b) {
+inproc Vec3 MinimumVec(Vec3 a, Vec3 b) {
 	return Vec3{ Minimum(a.x, b.x), Minimum(a.y, b.y), Minimum(a.z, b.z) };
 }
-INLINE_PROCEDURE Vec3 MaximumVec(Vec3 a, Vec3 b) {
+inproc Vec3 MaximumVec(Vec3 a, Vec3 b) {
 	return Vec3{ Maximum(a.x, b.x), Maximum(a.y, b.y), Maximum(a.z, b.z) };
 }
-INLINE_PROCEDURE Vec4 MinimumVec(Vec4 a, Vec4 b) {
+inproc Vec4 MinimumVec(Vec4 a, Vec4 b) {
 	return Vec4{ Minimum(a.x, b.x), Minimum(a.y, b.y), Minimum(a.z, b.z), Minimum(a.w, b.w) };
 }
-INLINE_PROCEDURE Vec4 MaximumVec(Vec4 a, Vec4 b) {
+inproc Vec4 MaximumVec(Vec4 a, Vec4 b) {
 	return Vec4{ Maximum(a.x, b.x), Maximum(a.y, b.y), Maximum(a.z, b.z), Maximum(a.w, b.w) };
 }
 
-INLINE_PROCEDURE bool IsNull(Vec2 a) {
+inproc bool IsNull(Vec2 a) {
 	return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON;
 }
-INLINE_PROCEDURE bool IsNull(Vec3 a) {
+inproc bool IsNull(Vec3 a) {
 	return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON && MathAbsolute(a.z) < REAL_EPSILON;
 }
-INLINE_PROCEDURE bool IsNull(Vec4 a) {
+inproc bool IsNull(Vec4 a) {
 	return MathAbsolute(a.x) < REAL_EPSILON && MathAbsolute(a.y) < REAL_EPSILON && MathAbsolute(a.z) < REAL_EPSILON &&
 		MathAbsolute(a.w) < REAL_EPSILON;
 }
 
-INLINE_PROCEDURE Vec2 operator+(Vec2 a, Vec2 b) {
+inproc Vec2 operator+(Vec2 a, Vec2 b) {
 	return Vec2(a.x + b.x, a.y + b.y);
 }
-INLINE_PROCEDURE Vec3 operator+(Vec3 a, Vec3 b) {
+inproc Vec3 operator+(Vec3 a, Vec3 b) {
 	return Vec3(a.x + b.x, a.y + b.y, a.z + b.z);
 }
-INLINE_PROCEDURE Vec4 operator+(Vec4 a, Vec4 b) {
+inproc Vec4 operator+(Vec4 a, Vec4 b) {
 	return Vec4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
-INLINE_PROCEDURE Vec2 operator-(Vec2 a, Vec2 b) {
+inproc Vec2 operator-(Vec2 a, Vec2 b) {
 	return Vec2(a.x - b.x, a.y - b.y);
 }
-INLINE_PROCEDURE Vec3 operator-(Vec3 a, Vec3 b) {
+inproc Vec3 operator-(Vec3 a, Vec3 b) {
 	return Vec3(a.x - b.x, a.y - b.y, a.z - b.z);
 }
-INLINE_PROCEDURE Vec4 operator-(Vec4 a, Vec4 b) {
+inproc Vec4 operator-(Vec4 a, Vec4 b) {
 	return Vec4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
 }
-INLINE_PROCEDURE Vec2 operator*(float s, Vec2 v) {
+inproc Vec2 operator*(float s, Vec2 v) {
 	return Vec2(s * v.x, s * v.y);
 }
-INLINE_PROCEDURE Vec2 operator*(Vec2 v, float s) {
+inproc Vec2 operator*(Vec2 v, float s) {
 	return s * v;
 }
-INLINE_PROCEDURE Vec3 operator*(float s, Vec3 v) {
+inproc Vec3 operator*(float s, Vec3 v) {
 	return Vec3(s * v.x, s * v.y, s * v.z);
 }
-INLINE_PROCEDURE Vec3 operator*(Vec3 v, float s) {
+inproc Vec3 operator*(Vec3 v, float s) {
 	return s * v;
 }
-INLINE_PROCEDURE Vec4 operator*(float s, Vec4 v) {
+inproc Vec4 operator*(float s, Vec4 v) {
 	return Vec4(s * v.x, s * v.y, s * v.z, s * v.w);
 }
-INLINE_PROCEDURE Vec4 operator*(Vec4 v, float s) {
+inproc Vec4 operator*(Vec4 v, float s) {
 	return s * v;
 }
-INLINE_PROCEDURE Vec2 operator/(Vec2 v, float s) {
+inproc Vec2 operator/(Vec2 v, float s) {
 	s = 1.0f / s;
 	return Vec2(v.x * s, v.y * s);
 }
-INLINE_PROCEDURE Vec3 operator/(Vec3 v, float s) {
+inproc Vec3 operator/(Vec3 v, float s) {
 	s = 1.0f / s;
 	return Vec3(v.x * s, v.y * s, v.z * s);
 }
-INLINE_PROCEDURE Vec4 operator/(Vec4 v, float s) {
+inproc Vec4 operator/(Vec4 v, float s) {
 	return v * 1.0f / s;
 }
-INLINE_PROCEDURE Vec2 operator*(Vec2 l, Vec2 r) {
+inproc Vec2 operator*(Vec2 l, Vec2 r) {
 	return Vec2(l.x * r.x, l.y * r.y);
 }
-INLINE_PROCEDURE Vec3 operator*(Vec3 l, Vec3 r) {
+inproc Vec3 operator*(Vec3 l, Vec3 r) {
 	return Vec3(l.x * r.x, l.y * r.y, l.z * r.z);
 }
-INLINE_PROCEDURE Vec4 operator*(Vec4 l, Vec4 r) {
+inproc Vec4 operator*(Vec4 l, Vec4 r) {
 	return Vec4(l.x * r.x, l.y * r.y, l.z * r.z, l.w * r.w);
 }
-INLINE_PROCEDURE Vec2 operator/(Vec2 l, Vec2 r) {
+inproc Vec2 operator/(Vec2 l, Vec2 r) {
 	return Vec2(l.x / r.x, l.y / r.y);
 }
-INLINE_PROCEDURE Vec3 operator/(Vec3 l, Vec3 r) {
+inproc Vec3 operator/(Vec3 l, Vec3 r) {
 	return Vec3(l.x / r.x, l.y / r.y, l.z / r.z);
 }
-INLINE_PROCEDURE Vec4 operator/(Vec4 l, Vec4 r) {
+inproc Vec4 operator/(Vec4 l, Vec4 r) {
 	return Vec4(l.x / r.x, l.y / r.y, l.z / r.z, l.w / r.w);
 }
 
-INLINE_PROCEDURE Vec2 operator-(const Vec2 &v) {
+inproc Vec2 operator-(const Vec2 &v) {
 	return Vec2(-v.x, -v.y);
 }
-INLINE_PROCEDURE Vec3 operator-(const Vec3 &v) {
+inproc Vec3 operator-(const Vec3 &v) {
 	return Vec3(-v.x, -v.y, -v.z);
 }
-INLINE_PROCEDURE Vec4 operator-(const Vec4 &v) {
+inproc Vec4 operator-(const Vec4 &v) {
 	return Vec4(-v.x, -v.y, -v.z, -v.w);
 }
-INLINE_PROCEDURE Vec2 &operator+=(Vec2 &a, Vec2 b) {
+inproc Vec2 &operator+=(Vec2 &a, Vec2 b) {
 	a = a + b;
 	return a;
 }
-INLINE_PROCEDURE Vec3 &operator+=(Vec3 &a, Vec3 b) {
+inproc Vec3 &operator+=(Vec3 &a, Vec3 b) {
 	a = a + b;
 	return a;
 }
-INLINE_PROCEDURE Vec4 &operator+=(Vec4 &a, Vec4 b) {
+inproc Vec4 &operator+=(Vec4 &a, Vec4 b) {
 	a = a + b;
 	return a;
 }
-INLINE_PROCEDURE Vec2 &operator-=(Vec2 &a, Vec2 b) {
+inproc Vec2 &operator-=(Vec2 &a, Vec2 b) {
 	a = a - b;
 	return a;
 }
-INLINE_PROCEDURE Vec3 &operator-=(Vec3 &a, Vec3 b) {
+inproc Vec3 &operator-=(Vec3 &a, Vec3 b) {
 	a = a - b;
 	return a;
 }
-INLINE_PROCEDURE Vec4 &operator-=(Vec4 &a, Vec4 b) {
+inproc Vec4 &operator-=(Vec4 &a, Vec4 b) {
 	a = a - b;
 	return a;
 }
-INLINE_PROCEDURE Vec2 &operator*=(Vec2 &t, float s) {
+inproc Vec2 &operator*=(Vec2 &t, float s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec3 &operator*=(Vec3 &t, float s) {
+inproc Vec3 &operator*=(Vec3 &t, float s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec4 &operator*=(Vec4 &t, float s) {
+inproc Vec4 &operator*=(Vec4 &t, float s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec2 &operator/=(Vec2 &t, float s) {
+inproc Vec2 &operator/=(Vec2 &t, float s) {
 	t = t / s;
 	return t;
 }
-INLINE_PROCEDURE Vec3 &operator/=(Vec3 &t, float s) {
+inproc Vec3 &operator/=(Vec3 &t, float s) {
 	t = t / s;
 	return t;
 }
-INLINE_PROCEDURE Vec4 &operator/=(Vec4 &t, float s) {
+inproc Vec4 &operator/=(Vec4 &t, float s) {
 	t = t / s;
 	return t;
 }
-INLINE_PROCEDURE Vec2 &operator*=(Vec2 &t, Vec2 s) {
+inproc Vec2 &operator*=(Vec2 &t, Vec2 s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec3 &operator*=(Vec3 &t, Vec3 s) {
+inproc Vec3 &operator*=(Vec3 &t, Vec3 s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec4 &operator*=(Vec4 &t, Vec4 s) {
+inproc Vec4 &operator*=(Vec4 &t, Vec4 s) {
 	t = t * s;
 	return t;
 }
-INLINE_PROCEDURE Vec2 &operator/=(Vec2 &t, Vec2 s) {
+inproc Vec2 &operator/=(Vec2 &t, Vec2 s) {
 	t = t / s;
 	return t;
 }
-INLINE_PROCEDURE Vec3 &operator/=(Vec3 &t, Vec3 s) {
+inproc Vec3 &operator/=(Vec3 &t, Vec3 s) {
 	t = t / s;
 	return t;
 }
-INLINE_PROCEDURE Vec4 &operator/=(Vec4 &t, Vec4 s) {
+inproc Vec4 &operator/=(Vec4 &t, Vec4 s) {
 	t = t / s;
 	return t;
 }
 
-INLINE_PROCEDURE float DotProduct(Vec2 a, Vec2 b) {
+inproc float DotProduct(Vec2 a, Vec2 b) {
 	return a.x * b.x + a.y * b.y;
 }
-INLINE_PROCEDURE float DotProduct(Vec3 a, Vec3 b) {
+inproc float DotProduct(Vec3 a, Vec3 b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-INLINE_PROCEDURE float DotProduct(Vec4 a, Vec4 b) {
+inproc float DotProduct(Vec4 a, Vec4 b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
-INLINE_PROCEDURE float Determinant(Vec2 a, Vec2 b) {
+inproc float Determinant(Vec2 a, Vec2 b) {
 	return (a.x * b.y) - (a.y * b.x);
 }
-INLINE_PROCEDURE Vec3 CrossProduct(Vec2 a, Vec2 b) {
+inproc Vec3 CrossProduct(Vec2 a, Vec2 b) {
 	Vec3 res;
 	res.x = 0;
 	res.y = 0;
 	res.z = (a.x * b.y) - (a.y * b.x);
 	return res;
 }
-INLINE_PROCEDURE Vec3 CrossProduct(Vec3 a, Vec3 b) {
+inproc Vec3 CrossProduct(Vec3 a, Vec3 b) {
 	Vec3 res;
 	res.x = (a.y * b.z) - (a.z * b.y);
 	res.y = (a.z * b.x) - (a.x * b.z);
 	res.z = (a.x * b.y) - (a.y * b.x);
 	return res;
 }
-INLINE_PROCEDURE Vec2 TripleProduct(Vec2 a, Vec2 b, Vec2 c) {
+inproc Vec2 TripleProduct(Vec2 a, Vec2 b, Vec2 c) {
 	float det = Determinant(a, b);
 	Vec2  res;
 	res.x = -c.y * det;
 	res.y = c.x * det;
 	return res;
 }
-INLINE_PROCEDURE Vec3 TripleProduct(Vec3 a, Vec3 b, Vec3 c) {
+inproc Vec3 TripleProduct(Vec3 a, Vec3 b, Vec3 c) {
 	return CrossProduct(CrossProduct(a, b), c);
 }
 
-INLINE_PROCEDURE float LengthSq(Vec2 v) {
+inproc float LengthSq(Vec2 v) {
 	return DotProduct(v, v);
 }
-INLINE_PROCEDURE float LengthSq(Vec3 v) {
+inproc float LengthSq(Vec3 v) {
 	return DotProduct(v, v);
 }
-INLINE_PROCEDURE float LengthSq(Vec4 v) {
+inproc float LengthSq(Vec4 v) {
 	return DotProduct(v, v);
 }
-INLINE_PROCEDURE float Length(Vec2 v) {
+inproc float Length(Vec2 v) {
 	return MathSquareRoot(DotProduct(v, v));
 }
-INLINE_PROCEDURE float Length(Vec3 v) {
+inproc float Length(Vec3 v) {
 	return MathSquareRoot(DotProduct(v, v));
 }
-INLINE_PROCEDURE float Length(Vec4 v) {
+inproc float Length(Vec4 v) {
 	return MathSquareRoot(DotProduct(v, v));
 }
-INLINE_PROCEDURE float Distance(float a, float b) {
+inproc float Distance(float a, float b) {
 	return b - a;
 }
-INLINE_PROCEDURE float Distance(Vec2 a, Vec2 b) {
+inproc float Distance(Vec2 a, Vec2 b) {
 	return Length(b - a);
 }
-INLINE_PROCEDURE float Distance(Vec3 a, Vec3 b) {
+inproc float Distance(Vec3 a, Vec3 b) {
 	return Length(b - a);
 }
-INLINE_PROCEDURE float Distance(Vec4 a, Vec4 b) {
+inproc float Distance(Vec4 a, Vec4 b) {
 	return Length(b - a);
 }
 
-INLINE_PROCEDURE Vec2 NormalizeChecked(Vec2 v) {
+inproc Vec2 NormalizeChecked(Vec2 v) {
 	Vec2  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v / len;
 	return res;
 }
-INLINE_PROCEDURE Vec3 NormalizeChecked(Vec3 v) {
+inproc Vec3 NormalizeChecked(Vec3 v) {
 	Vec3  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v / len;
 	return res;
 }
-INLINE_PROCEDURE Vec4 NormalizeChecked(Vec4 v) {
+inproc Vec4 NormalizeChecked(Vec4 v) {
 	Vec4  res(0);
 	float len = Length(v);
 	if (len != 0)
 		res = v * (1.0f / len);
 	return res;
 }
-INLINE_PROCEDURE Vec2 Normalize(Vec2 v) {
+inproc Vec2 Normalize(Vec2 v) {
 	Vec2  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v / len;
 	return res;
 }
-INLINE_PROCEDURE Vec3 Normalize(Vec3 v) {
+inproc Vec3 Normalize(Vec3 v) {
 	Vec3  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v / len;
 	return res;
 }
-INLINE_PROCEDURE Vec4 Normalize(Vec4 v) {
+inproc Vec4 Normalize(Vec4 v) {
 	Vec4  res(0);
 	float len = Length(v);
 	Assert(len != 0);
 	res = v * (1.0f / len);
 	return res;
 }
-INLINE_PROCEDURE Vec2 PerpendicularVector(Vec2 a, Vec2 b) {
+inproc Vec2 PerpendicularVector(Vec2 a, Vec2 b) {
 	float dx = b.x - a.x;
 	float dy = b.y - a.y;
 	return Normalize(Vec2(-dy, dx));
 }
 
-INLINE_PROCEDURE float AngleBetween(Vec2 a, Vec2 b) {
+inproc float AngleBetween(Vec2 a, Vec2 b) {
 	float dot = Clamp(-1.0f, 1.0f, DotProduct(a, b));
 	return MathCos(dot);
 }
-INLINE_PROCEDURE float AngleBetween(Vec3 a, Vec3 b) {
+inproc float AngleBetween(Vec3 a, Vec3 b) {
 	float dot = Clamp(-1.0f, 1.0f, DotProduct(a, b));
 	return MathCos(dot);
 }
-INLINE_PROCEDURE float AngleBetweenNormalized(Vec2 a, Vec2 b) {
+inproc float AngleBetweenNormalized(Vec2 a, Vec2 b) {
 	a = Normalize(a);
 	b = Normalize(b);
 	return AngleBetween(a, b);
 }
-INLINE_PROCEDURE float AngleBetweenNormalized(Vec3 a, Vec3 b) {
+inproc float AngleBetweenNormalized(Vec3 a, Vec3 b) {
 	a = Normalize(a);
 	b = Normalize(b);
 	return AngleBetween(a, b);
 }
-INLINE_PROCEDURE float SignedAngleBetween(Vec2 a, Vec2 b) {
+inproc float SignedAngleBetween(Vec2 a, Vec2 b) {
 	float dot = Clamp(-1.0f, 1.0f, DotProduct(a, b));
 	float angle = MathCos(dot);
 	float cross = a.x * b.y - a.y * b.x;
@@ -514,7 +514,7 @@ INLINE_PROCEDURE float SignedAngleBetween(Vec2 a, Vec2 b) {
 	}
 	return angle;
 }
-INLINE_PROCEDURE float SignedAngleBetween(Vec3 a, Vec3 b, Vec3 n) {
+inproc float SignedAngleBetween(Vec3 a, Vec3 b, Vec3 n) {
 	float dot = Clamp(-1.0f, 1.0f, DotProduct(a, b));
 	float angle = MathCos(dot);
 	Vec3  cross = CrossProduct(a, b);
@@ -523,30 +523,30 @@ INLINE_PROCEDURE float SignedAngleBetween(Vec3 a, Vec3 b, Vec3 n) {
 	}
 	return angle;
 }
-INLINE_PROCEDURE float SignedAngleBetweenNormalized(Vec2 a, Vec2 b) {
+inproc float SignedAngleBetweenNormalized(Vec2 a, Vec2 b) {
 	a = Normalize(a);
 	b = Normalize(b);
 	return SignedAngleBetween(a, b);
 }
-INLINE_PROCEDURE float SignedAngleBetweenNormalized(Vec3 a, Vec3 b, Vec3 n) {
+inproc float SignedAngleBetweenNormalized(Vec3 a, Vec3 b, Vec3 n) {
 	a = Normalize(a);
 	b = Normalize(b);
 	n = Normalize(n);
 	return SignedAngleBetween(a, b, n);
 }
 
-INLINE_PROCEDURE Vec2 ClampVec(Vec2 min, Vec2 max, Vec2 v) {
+inproc Vec2 ClampVec(Vec2 min, Vec2 max, Vec2 v) {
 	v.x = Clamp(min.x, max.x, v.x);
 	v.y = Clamp(min.y, max.y, v.y);
 	return v;
 }
-INLINE_PROCEDURE Vec3 ClampVec(Vec3 min, Vec3 max, Vec3 v) {
+inproc Vec3 ClampVec(Vec3 min, Vec3 max, Vec3 v) {
 	v.x = Clamp(min.x, max.x, v.x);
 	v.y = Clamp(min.y, max.y, v.y);
 	v.z = Clamp(min.z, max.z, v.z);
 	return v;
 }
-INLINE_PROCEDURE Vec4 ClampVec(Vec4 min, Vec4 max, Vec4 v) {
+inproc Vec4 ClampVec(Vec4 min, Vec4 max, Vec4 v) {
 	v.x = Clamp(min.x, max.x, v.x);
 	v.y = Clamp(min.y, max.y, v.y);
 	v.z = Clamp(min.z, max.z, v.z);
@@ -572,15 +572,15 @@ Vec3         operator*(const Mat3 &mat, Vec3 vec);
 Mat4         operator*(const Mat4 &left, const Mat4 &right);
 Vec4         operator*(const Mat4 &mat, Vec4 vec);
 
-INLINE_PROCEDURE Mat2 &operator*=(Mat2 &t, Mat2 &o) {
+inproc Mat2 &operator*=(Mat2 &t, Mat2 &o) {
 	t = t * o;
 	return t;
 }
-INLINE_PROCEDURE Mat3 &operator*=(Mat3 &t, Mat3 &o) {
+inproc Mat3 &operator*=(Mat3 &t, Mat3 &o) {
 	t = t * o;
 	return t;
 }
-INLINE_PROCEDURE Mat4 &operator*=(Mat4 &t, Mat4 &o) {
+inproc Mat4 &operator*=(Mat4 &t, Mat4 &o) {
 	t = t * o;
 	return t;
 }
@@ -597,19 +597,19 @@ Mat3        ToMat3(const Mat2 &mat);
 Mat3        ToMat3(const Mat4 &mat);
 Mat4        ToMat4(const Mat3 &mat);
 
-INLINE_PROCEDURE Quat operator-(Quat &q) {
+inproc Quat operator-(Quat &q) {
 	return Quat(-q.v4);
 }
-INLINE_PROCEDURE Quat operator-(Quat r1, Quat r2) {
+inproc Quat operator-(Quat r1, Quat r2) {
 	return Quat(r1.v4 - r2.v4);
 }
-INLINE_PROCEDURE Quat operator+(Quat r1, Quat r2) {
+inproc Quat operator+(Quat r1, Quat r2) {
 	return Quat(r1.v4 + r2.v4);
 }
-INLINE_PROCEDURE Quat operator*(Quat q, float s) {
+inproc Quat operator*(Quat q, float s) {
 	return Quat(q.v4 * s);
 }
-INLINE_PROCEDURE Quat operator*(float s, Quat q) {
+inproc Quat operator*(float s, Quat q) {
 	return Quat(q.v4 * s);
 }
 
@@ -619,7 +619,7 @@ Quat        Normalize(Quat q);
 Quat        Conjugate(Quat q);
 Quat        operator*(Quat q1, Quat q2);
 Vec3        Rotate(Quat q, Vec3 v);
-INLINE_PROCEDURE Vec3 operator*(Quat q, Vec3 v) {
+inproc Vec3 operator*(Quat q, Vec3 v) {
 	Rotate(q, v);
 }
 
@@ -732,7 +732,7 @@ Vec2 RotateAround(Vec2 point, Vec2 center, float angle);
 Quat RotateTowards(Quat from, Quat to, float max_angle);
 Vec2 Reflect(Vec2 d, Vec2 n);
 
-union Packed_Color {
+struct Packed_Color {
 	uint8_t r, g, b, a;
 	Packed_Color() {}
 	Packed_Color(uint8_t x, uint8_t y, uint8_t z, uint8_t w) : r(x), g(y), b(z), a(w) {}

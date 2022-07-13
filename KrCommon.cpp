@@ -5,6 +5,11 @@
 
 thread_local Thread_Context ThreadContext;
 
+void HandleAssertion(const char *file, int line, const char *proc) {
+	ThreadContext.assert_proc(file, line, proc);
+	TriggerBreakpoint();
+}
+
 struct Memory_Arena {
 	size_t current;
 	size_t reserved;
@@ -294,7 +299,10 @@ void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_si
 }
 
 void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
-	vfprintf(level != LOG_LEVEL_ERROR ? stdout : stderr, fmt, args);
+	char buff[4096 + 2];
+	int len = vsnprintf(buff, 4096, fmt, args);
+	snprintf(buff + len, 2, "\n");
+	fprintf(level != LOG_LEVEL_ERROR ? stdout : stderr, "%s", buff);
 }
 
 void DefaultFatalErrorProc(const char *message) {
@@ -317,6 +325,7 @@ void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &pa
 
 	ThreadContext.allocator   = params.allocator;
 	ThreadContext.logger      = params.logger;
+	ThreadContext.assert_proc = params.assert_proc;
 	ThreadContext.fatal_error = params.fatal_error;
 }
 
@@ -385,6 +394,10 @@ void LogEx(Log_Level level, const char *source, const char *fmt, ...) {
 
 void FatalError(const char *message) {
 	ThreadContext.fatal_error(message);
+}
+
+void DefaultHandleAssertion(const char *file, int line, const char *proc) {
+	LogError("Assertion Failed inside \"%s\": %s(%d)", proc, file, line);
 }
 
 //

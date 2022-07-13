@@ -148,41 +148,20 @@
 #endif
 #endif
 
-#if !defined(ASSERTION_HANDLED)
-#define AssertHandle(reason, file, line, proc) TriggerBreakpoint()
-#else
-void AssertHandle(const char *reason, const char *file, int line, const char *proc);
-#endif
-
 #if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
 #define DebugTriggerbreakpoint TriggerBreakpoint
-#define Assert(x)                                                             \
-    do                                                                        \
-    {                                                                         \
-        if (!(x))                                                             \
-            AssertHandle("Assert Failed", __FILE__, __LINE__, __PROCEDURE__); \
-    } while (0)
 #else
 #define DebugTriggerbreakpoint()
-#define Assert(x) \
-    do            \
-    {             \
-        0;        \
-    } while (0)
 #endif
 
-#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
-#define Unimplemented() AssertHandle("Unimplemented procedure", __FILE__, __LINE__, __PROCEDURE__);
-#else
-#define Unimplemented() TriggerBreakpoint();
-#endif
+inproc void Unimplemented() { TriggerBreakpoint(); }
 
 #ifdef __GNUC__
-[[noreturn]] inline __attribute__((always_inline)) void Unreachable() { DebugTriggerbreakpoint(); __builtin_unreachable(); }
+[[noreturn]] inproc __attribute__((always_inline)) void Unreachable() { DebugTriggerbreakpoint(); __builtin_unreachable(); }
 #elif defined(_MSC_VER)
 [[noreturn]] __forceinline void Unreachable() { DebugTriggerbreakpoint(); __assume(false); }
 #else // ???
-inline void Unreachable() { TriggerBreakpoint(); }
+inproc void Unreachable() { TriggerBreakpoint(); }
 #endif
 
 #define NoDefaultCase() default: Unreachable(); break
@@ -214,5 +193,3 @@ inline void Unreachable() { TriggerBreakpoint(); }
 #define KiloBytes(n) ((n)*1024u)
 #define MegaBytes(n) (KiloBytes(n) * 1024u)
 #define GigaBytes(n) (MegaBytes(n) * 1024u)
-
-typedef uint32_t boolx;

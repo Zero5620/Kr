@@ -4,6 +4,25 @@
 
 #include "KrPlatform.h"
 
+typedef void (*Handle_Assertion_Proc)(const char *file, int line, const char *proc);
+void HandleAssertion(const char *file, int line, const char *proc);
+
+#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
+#define Assert(x)                                               \
+    do                                                          \
+    {                                                           \
+        if (!(x))                                               \
+            HandleAssertion(__FILE__, __LINE__, __PROCEDURE__); \
+    } while (0)
+#else
+#define DebugTriggerbreakpoint()
+#define Assert(x) \
+    do            \
+    {             \
+        0;        \
+    } while (0)
+#endif
+
 constexpr size_t MemoryArenaCommitSize = KiloBytes(64);
 
 struct String {
@@ -154,10 +173,11 @@ typedef void(*Fatal_Error_Proc)(const char *message);
 //
 
 typedef struct Thread_Context {
-	Thread_Scratchpad scratchpad;
-	Memory_Allocator  allocator;
-	Logger            logger;
-	Fatal_Error_Proc  fatal_error;
+	Thread_Scratchpad     scratchpad;
+	Memory_Allocator      allocator;
+	Logger                logger;
+	Handle_Assertion_Proc assert_proc;
+	Fatal_Error_Proc      fatal_error;
 } Thread_Context;
 
 extern thread_local Thread_Context ThreadContext;
@@ -182,11 +202,14 @@ Memory_Allocator NullMemoryAllocator();
 //
 
 struct Thread_Context_Params {
-	Memory_Allocator allocator;
-	Logger           logger;
-	Fatal_Error_Proc fatal_error;
-	uint32_t         scratchpad_arena_count;
+	Memory_Allocator      allocator;
+	Logger                logger;
+	Handle_Assertion_Proc assert_proc;
+	Fatal_Error_Proc      fatal_error;
+	uint32_t              scratchpad_arena_count;
 };
+
+void DefaultHandleAssertion(const char *file, int line, const char *proc);
 
 void *DefaultMemoryAllocate(size_t size, void *context);
 void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context);
@@ -199,6 +222,7 @@ void DefaultFatalErrorProc(const char *message);
 static constexpr Thread_Context_Params ThreadContextDefaultParams = {
 	{ DefaultMemoryAllocatorProc, nullptr },
 	{ DefaultLoggerProc, nullptr },
+	DefaultHandleAssertion,
 	DefaultFatalErrorProc,
 	MaxThreadContextScratchpadArena
 };

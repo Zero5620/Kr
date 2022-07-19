@@ -280,10 +280,10 @@ Quat Quat::FromMat4(const Mat4 &m) {
 
 Quat Quat::FromMat4Nomalized(const Mat4 &m) {
 	Mat4 nm;
-	nm.rows[0] = Vec4(Normalize(VecXYZ(m.rows[0])), m.rows[0].w);
-	nm.rows[1] = Vec4(Normalize(VecXYZ(m.rows[1])), m.rows[1].w);
-	nm.rows[2] = Vec4(Normalize(VecXYZ(m.rows[2])), m.rows[2].w);
-	nm.rows[3] = Vec4(Normalize(VecXYZ(m.rows[3])), m.rows[3].w);
+	nm.rows[0] = Vec4(Normalize(v_xyz(m.rows[0])), m.rows[0].w);
+	nm.rows[1] = Vec4(Normalize(v_xyz(m.rows[1])), m.rows[1].w);
+	nm.rows[2] = Vec4(Normalize(v_xyz(m.rows[2])), m.rows[2].w);
+	nm.rows[3] = Vec4(Normalize(v_xyz(m.rows[3])), m.rows[3].w);
 	return Quat::FromMat4(nm);
 }
 
@@ -508,15 +508,15 @@ Mat2 operator*(const Mat2 &left, const Mat2 &right) {
 
 Vec2 operator*(const Mat2 &mat, Vec2 vec) {
 	Vec2 res;
-	res[0] = DotProduct(vec, mat.rows[0]);
-	res[1] = DotProduct(vec, mat.rows[1]);
+	res.m[0] = DotProduct(vec, mat.rows[0]);
+	res.m[1] = DotProduct(vec, mat.rows[1]);
 	return res;
 }
 
 Vec2 operator*(Vec2 vec, const Mat2 &mat) {
 	Vec2 res;
-	res[0] = DotProduct(vec, Vec2(mat.m2[0][0], mat.m2[1][0]));
-	res[1] = DotProduct(vec, Vec2(mat.m2[0][1], mat.m2[1][1]));
+	res.m[0] = DotProduct(vec, Vec2(mat.m2[0][0], mat.m2[1][0]));
+	res.m[1] = DotProduct(vec, Vec2(mat.m2[0][1], mat.m2[1][1]));
 	return res;
 }
 
@@ -541,9 +541,9 @@ Mat3 operator*(const Mat3 &left, const Mat3 &right) {
 
 Vec3 operator*(const Mat3 &mat, Vec3 vec) {
 	Vec3 res;
-	res[0] = DotProduct(vec, mat.rows[0]);
-	res[1] = DotProduct(vec, mat.rows[1]);
-	res[2] = DotProduct(vec, mat.rows[2]);
+	res.m[0] = DotProduct(vec, mat.rows[0]);
+	res.m[1] = DotProduct(vec, mat.rows[1]);
+	res.m[2] = DotProduct(vec, mat.rows[2]);
 	return res;
 }
 
@@ -576,10 +576,10 @@ Mat4 operator*(const Mat4 &left, const Mat4 &right) {
 
 Vec4 operator*(const Mat4 &mat, Vec4 vec) {
 	Vec4 res;
-	res[0] = DotProduct(vec, mat.rows[0]);
-	res[1] = DotProduct(vec, mat.rows[1]);
-	res[2] = DotProduct(vec, mat.rows[2]);
-	res[3] = DotProduct(vec, mat.rows[3]);
+	res.m[0] = DotProduct(vec, mat.rows[0]);
+	res.m[1] = DotProduct(vec, mat.rows[1]);
+	res.m[2] = DotProduct(vec, mat.rows[2]);
+	res.m[3] = DotProduct(vec, mat.rows[3]);
 	return res;
 }
 
@@ -824,7 +824,7 @@ Vec3 LinearToSrgb(Vec3 color) {
 }
 
 Vec4 LinearToSrgb(Vec4 color) {
-	Vec4 res = Vec4(LinearToSrgb(VecXYZ(color)), color.w);
+	Vec4 res = Vec4(LinearToSrgb(v_xyz(color)), color.w);
 	return res;
 }
 
@@ -838,7 +838,7 @@ Vec3 LinearToSrgb(Vec3 color, float gamma) {
 }
 
 Vec4 LinearToSrgb(Vec4 color, float gamma) {
-	Vec4 res = Vec4(LinearToSrgb(VecXYZ(color), gamma), color.w);
+	Vec4 res = Vec4(LinearToSrgb(v_xyz(color), gamma), color.w);
 	return res;
 }
 
@@ -850,7 +850,7 @@ Vec3 SrgbToLinear(Vec3 color) {
 }
 
 Vec4 SrgbToLinear(Vec4 color) {
-	Vec4 res = Vec4(SrgbToLinear(VecXYZ(color)), color.w);
+	Vec4 res = Vec4(SrgbToLinear(v_xyz(color)), color.w);
 	return res;
 }
 
@@ -863,7 +863,7 @@ Vec3 SrgbToLinear(Vec3 color, float gamma) {
 }
 
 Vec4 SrgbToLinear(Vec4 color, float gamma) {
-	Vec4 res = Vec4(SrgbToLinear(VecXYZ(color), gamma), color.w);
+	Vec4 res = Vec4(SrgbToLinear(v_xyz(color), gamma), color.w);
 	return res;
 }
 
@@ -942,11 +942,11 @@ Vec3 RgbToHsv(Vec3 c) {
 }
 
 Vec4 HsvToRgb(Vec4 c) {
-	return Vec4(HsvToRgb(VecXYZ(c)), c.w);
+	return Vec4(HsvToRgb(v_xyz(c)), c.w);
 }
 
 Vec4 RgbToHsv(Vec4 c) {
-	return Vec4(RgbToHsv(VecXYZ(c)), c.w);
+	return Vec4(RgbToHsv(v_xyz(c)), c.w);
 }
 
 //

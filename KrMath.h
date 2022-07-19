@@ -10,48 +10,46 @@ constexpr float REAL_EPSILON = FLT_EPSILON;
 constexpr float REAL_MAX = FLT_MAX;
 constexpr float REAL_MIN = FLT_MIN;
 
-#ifdef MATH_SANITY_CHECK
-#define MathAssert Assert
-#else
-#define MathAssert(x)
-#endif
-
 struct Vec2 {
-	float x, y;
+	union {
+		struct { float x, y; };
+		float m[2];
+	};
+
 	Vec2() {}
 	Vec2(float a) : x(a), y(a) {}
 	Vec2(float a, float b) : x(a), y(b) {}
-	float &operator[](int index) { MathAssert(index < 2); return ((float *)&x)[index]; }
-	const float &operator[](int index) const { MathAssert(index < 2); return ((float *)&x)[index]; }
 };
 
 struct Vec3 {
-	float x, y, z;
+	union {
+		struct { float x, y, z; };
+		float m[3];
+	};
 	Vec3() {}
 	Vec3(float a) : x(a), y(a), z(a) {}
 	Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
 	Vec3(Vec2 ab, float c) : x(ab.x), y(ab.y), z(c) {}
 	Vec3(float a, Vec2 cd) : x(a), y(cd.x), z(cd.y) {}
-	float &operator[](int index) { MathAssert(index < 3); return ((float *)&x)[index]; }
-	const float &operator[](int index) const { MathAssert(index < 3); return ((float *)&x)[index]; }
 };
 
 struct Vec4 {
-	float x, y, z, w;
+	union {
+		float x, y, z, w;
+		float m[4];
+	};
 	Vec4() {}
 	Vec4(float a) : x(a), y(a), z(a), w(a) {}
 	Vec4(float a, float b, float c, float d) : x(a), y(b), z(c), w(d) {}
 	Vec4(Vec2 ab, Vec2 cd): x(ab.x), y(ab.y), z(cd.x), w(cd.y) {}
 	Vec4(Vec3 abc, float d): x(abc.x), y(abc.y), z(abc.z), w(d) {}
 	Vec4(float a, Vec3 bcd): x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
-	float &operator[](int index) { MathAssert(index < 4); return ((float *)&x)[index]; }
-	const float &operator[](int index) const { MathAssert(index < 4); return ((float *)&x)[index]; }
 };
 
-#define VecXY(v)  Vec2((v).x, (v).y)
-#define VecYZ(v)  Vec2((v).y, (v).z)
-#define VecXYZ(v) Vec3((v).x, (v).y, (v).z)
-#define VecYZW(v) Vec3((v).y, (v).z, (v).w)
+#define v_xy(v)  Vec2((v).x, (v).y)
+#define v_yz(v)  Vec2((v).y, (v).z)
+#define v_xyz(v) Vec3((v).x, (v).y, (v).z)
+#define v_yzw(v) Vec3((v).y, (v).z, (v).w)
 
 union Mat2 {
 	Vec2  rows[2];
@@ -716,7 +714,7 @@ template <typename T> float SmoothStep(T a, T b, T v) {
 	return x * x * (3 - 2 * x);
 }
 
-float                   InverseSmoothStep(float x);
+float InverseSmoothStep(float x);
 
 template <typename T> T MapRange(T in_a, T in_b, T out_a, T out_b, T v) {
 	return (out_b - out_a) / (in_b - in_a) * (v - in_a) + out_a;

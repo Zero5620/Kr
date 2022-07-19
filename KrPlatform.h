@@ -121,8 +121,7 @@
 
 #if defined(_MSC_VER)
 #define TriggerBreakpoint() __debugbreak()
-#elif ((!defined(__NACL__)) && \
-       ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
+#elif ((!defined(__NACL__)) && ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
 #define TriggerBreakpoint() __asm__ __volatile__("int $3\n\t")
 #elif defined(__386__) && defined(__WATCOMC__)
 #define TriggerBreakpoint() _asm { int 0x03}

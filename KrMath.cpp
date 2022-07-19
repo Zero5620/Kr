@@ -161,7 +161,7 @@ Mat4 Mat4::LookAt(Vec3 from, Vec3 to, Vec3 world_up) {
 }
 
 Mat4 Mat4::LookAtDirection(Vec3 dir, Vec3 world_up) {
-	Assert(!IsNull(dir));
+	MathAssert(!IsNull(dir));
 
 	Vec3 forward = dir;
 	Vec3 right = Normalize(CrossProduct(world_up, forward));
@@ -657,7 +657,7 @@ float Length(Quat q) {
 
 Quat Normalize(Quat q) {
 	float len = Length(q);
-	Assert(len != 0);
+	MathAssert(len != 0);
 	return q * (1.0f / len);
 }
 

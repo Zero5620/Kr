@@ -1,5 +1,35 @@
 #pragma once
-#include "KrCommon.h"
+
+#if __has_include ("KrPlatform.h")
+#include "KrPlatform.h"
+#else
+#include <stdint.h>
+#include <stddef.h>
+
+#define Minimum(a, b) (((a) < (b)) ? (a) : (b))
+#define Maximum(a, b) (((a) > (b)) ? (a) : (b))
+#define Clamp(a, b, v) Minimum(b, Maximum(a, v))
+
+#if defined(_MSC_VER)
+#define TriggerBreakpoint() __debugbreak()
+#elif ((!defined(__NACL__)) && ((defined(__GNUC__) || defined(__clang__)) && (defined(__i386__) || defined(__x86_64__))))
+#define TriggerBreakpoint() __asm__ __volatile__("int $3\n\t")
+#elif defined(__386__) && defined(__WATCOMC__)
+#define TriggerBreakpoint() _asm { int 0x03}
+#elif defined(HAVE_SIGNAL_H) && !defined(__WATCOMC__)
+#define TriggerBreakpoint() raise(SIGTRAP)
+#else
+#define TriggerBreakpoint() ((int *)0) = 0
+#endif
+
+#if defined(__GNUC__)
+#define inproc inline static
+#else
+#define inproc inline
+#endif
+
+#endif
+
 #include <float.h>
 #include <math.h>
 
@@ -9,6 +39,18 @@ constexpr float TAU = PI / 2;
 constexpr float REAL_EPSILON = FLT_EPSILON;
 constexpr float REAL_MAX = FLT_MAX;
 constexpr float REAL_MIN = FLT_MIN;
+
+#ifndef Assert
+#if defined(BUILD_DEBUG) || defined(BUILD_DEVELOPER)
+#define MathAssert(x)           \
+        if (!(x))               \
+            TriggerBreakpoint();
+#else
+#define MathAssert(x) 
+#endif
+#else
+#define MathAssert Assert
+#endif // !Assert
 
 struct Vec2 {
 	union {
@@ -35,7 +77,7 @@ struct Vec3 {
 
 struct Vec4 {
 	union {
-		float x, y, z, w;
+		struct { float x, y, z, w; };
 		float m[4];
 	};
 	Vec4() {}
@@ -461,21 +503,21 @@ inproc Vec4 NormalizeChecked(Vec4 v) {
 inproc Vec2 Normalize(Vec2 v) {
 	Vec2  res(0);
 	float len = Length(v);
-	Assert(len != 0);
+	MathAssert(len != 0);
 	res = v / len;
 	return res;
 }
 inproc Vec3 Normalize(Vec3 v) {
 	Vec3  res(0);
 	float len = Length(v);
-	Assert(len != 0);
+	MathAssert(len != 0);
 	res = v / len;
 	return res;
 }
 inproc Vec4 Normalize(Vec4 v) {
 	Vec4  res(0);
 	float len = Length(v);
-	Assert(len != 0);
+	MathAssert(len != 0);
 	res = v * (1.0f / len);
 	return res;
 }
@@ -618,7 +660,7 @@ Quat        Conjugate(Quat q);
 Quat        operator*(Quat q1, Quat q2);
 Vec3        Rotate(Quat q, Vec3 v);
 inproc Vec3 operator*(Quat q, Vec3 v) {
-	Rotate(q, v);
+	return Rotate(q, v);
 }
 
 void  GetAngleAxis(Quat q, float *angle, Vec3 *axis);

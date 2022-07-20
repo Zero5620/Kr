@@ -172,47 +172,14 @@ void FreeTemporaryMemory(Temporary_Memory *temp) {
 	MemoryArenaPackToPos(temp->arena, temp->position);
 }
 
-Memory_Arena *ThreadScratchpad() {
-	return ThreadContext.scratchpad.arena[0];
-}
-
-Memory_Arena *ThreadScratchpadI(uint32_t i) {
-#if __cplusplus >= 201703L
-	if constexpr (MaxThreadContextScratchpadArena == 1)
-		return ThreadContext.scratchpad.arena[0];
-#endif
-	Assert(i < ArrayCount(ThreadContext.scratchpad.arena));
-	return ThreadContext.scratchpad.arena[i];
-}
-
-Memory_Arena *ThreadUnusedScratchpad(Memory_Arena **arenas, uint32_t count) {
-	for (auto thread_arena : ThreadContext.scratchpad.arena) {
-		bool conflict = false;
-		for (uint32_t index = 0; index < count; ++index) {
-			if (thread_arena == arenas[index]) {
-				conflict = true;
-				break;
-			}
-		}
-		if (!conflict)
-			return thread_arena;
-	}
-
-	return nullptr;
+Memory_Arena *ThreadScratchpad(uint32_t index) {
+	return ThreadContext.scratchpad.arena[index];
 }
 
 void ResetThreadScratchpad() {
-	for (auto &thread_arena : ThreadContext.scratchpad.arena) {
+	for (auto thread_arena : ThreadContext.scratchpad.arena) {
 		MemoryArenaReset(thread_arena);
 	}
-}
-
-void ThreadContextSetAllocator(Memory_Allocator allocator) {
-	ThreadContext.allocator = allocator;
-}
-
-void ThreadContextSetLogger(Logger logger) {
-	ThreadContext.logger = logger;
 }
 
 static void *MemoryArenaAllocatorAllocate(size_t size, void *context) {
@@ -273,39 +240,41 @@ Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena) {
 	return allocator;
 }
 
-static void *NullMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
-	return nullptr;
-}
+static void  InitOSContent();
+static void  FatalErrorOS(const char *message);
+static void *DefaultMemoryAllocateProc(size_t size, void *context);
+static void *DefaultMemoryReallocateProc(void *ptr, size_t previous_size, size_t new_size, void *context);
+static void  DefaultMemoryFreeProc(void *ptr, size_t allocated, void *context);
 
-Memory_Allocator NullMemoryAllocator() {
-	Memory_Allocator allocator;
-	allocator.proc = NullMemoryAllocatorProc;
-	allocator.context = NULL;
-	return allocator;
-}
-
-static void InitOSContent();
-static void FatalErrorOS(const char *message);
-
-void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
+void *Thread_Context::DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
 	if (kind == ALLOCATION_KIND_ALLOC) {
-		return DefaultMemoryAllocate(new_size, context);
+		return DefaultMemoryAllocateProc(new_size, context);
 	} else if (kind == ALLOCATION_KIND_REALLOC) {
-		return DefaultMemoryReallocate(mem, prev_size, new_size, context);
+		return DefaultMemoryReallocateProc(mem, prev_size, new_size, context);
 	} else {
-		DefaultMemoryFree(mem, prev_size, context);
+		DefaultMemoryFreeProc(mem, prev_size, context);
 		return nullptr;
 	}
 }
 
-void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
+void *Thread_Context::TmpMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
+	for (int i = MaxThreadContextScratchpadArena - 1; i >= 0; --i) {
+		if (ThreadContext.allocator.context != ThreadContext.scratchpad.arena[i]) {
+			return MemoryArenaAllocatorProc(kind, mem, prev_size, new_size, ThreadContext.scratchpad.arena[i]);
+		}
+	}
+	Unreachable();
+	return nullptr;
+}
+
+void Thread_Context::DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args) {
 	char buff[4096 + 2];
 	int len = vsnprintf(buff, 4096, fmt, args);
 	snprintf(buff + len, 2, "\n");
 	fprintf(level != LOG_LEVEL_ERROR ? stdout : stderr, "%s", buff);
 }
 
-void DefaultFatalErrorProc(const char *message) {
+void Thread_Context::DefaultFatalError(const char *message) {
 	LogErrorEx("Fatal Error", message);
 	FatalErrorOS(message);
 }
@@ -314,9 +283,7 @@ void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &pa
 	InitOSContent();
 
 	if (scratchpad_size) {
-		uint32_t arena_count = params.scratchpad_arena_count;
-		arena_count = Minimum(arena_count, MaxThreadContextScratchpadArena);
-		for (uint32_t arena_index = 0; arena_index < arena_count; ++arena_index) {
+		for (uint32_t arena_index = 0; arena_index < MaxThreadContextScratchpadArena; ++arena_index) {
 			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaAllocate(scratchpad_size);
 		}
 	} else {
@@ -396,7 +363,7 @@ void FatalError(const char *message) {
 	ThreadContext.fatal_error(message);
 }
 
-void DefaultHandleAssertion(const char *file, int line, const char *proc) {
+void Thread_Context::DefaultHandleAssertion(const char *file, int line, const char *proc) {
 	LogError("Assertion Failed inside \"%s\": %s(%d)", proc, file, line);
 }
 
@@ -420,12 +387,12 @@ static void FatalErrorOS(const char *message) {
 	FatalAppExitW(0, wmessage);
 }
 
-void *DefaultMemoryAllocate(size_t size, void *context) {
+static void *DefaultMemoryAllocateProc(size_t size, void *context) {
 	HANDLE heap = GetProcessHeap();
 	return HeapAlloc(heap, 0, size);
 }
 
-void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
+static void *DefaultMemoryReallocateProc(void *ptr, size_t previous_size, size_t new_size, void *context) {
 	HANDLE heap = GetProcessHeap();
 	if (ptr) {
 		return HeapReAlloc(heap, 0, ptr, new_size);
@@ -434,7 +401,7 @@ void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, 
 	}
 }
 
-void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
+static void DefaultMemoryFreeProc(void *ptr, size_t allocated, void *context) {
 	HANDLE heap = GetProcessHeap();
 	HeapFree(heap, 0, ptr);
 }
@@ -467,15 +434,15 @@ static void FatalErrorOS(const char *message) {
 	exit(1);
 }
 
-void *DefaultMemoryAllocate(size_t size, void *context) {
+static void *DefaultMemoryAllocateProc(size_t size, void *context) {
 	return malloc(size);
 }
 
-void *DefaultMemoryReallocate(void *ptr, size_t previous_size, size_t new_size, void *context) {
+static void *DefaultMemoryReallocateProc(void *ptr, size_t previous_size, size_t new_size, void *context) {
 	return realloc(ptr, new_size);
 }
 
-void DefaultMemoryFree(void *ptr, size_t allocated, void *context) {
+static void DefaultMemoryFreeProc(void *ptr, size_t allocated, void *context) {
 	free(ptr);
 }
 

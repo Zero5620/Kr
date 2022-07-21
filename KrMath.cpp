@@ -280,10 +280,10 @@ Quat Quat::FromMat4(const Mat4 &m) {
 
 Quat Quat::FromMat4Nomalized(const Mat4 &m) {
 	Mat4 nm;
-	nm.rows[0] = Vec4(Normalize(v_xyz(m.rows[0])), m.rows[0].w);
-	nm.rows[1] = Vec4(Normalize(v_xyz(m.rows[1])), m.rows[1].w);
-	nm.rows[2] = Vec4(Normalize(v_xyz(m.rows[2])), m.rows[2].w);
-	nm.rows[3] = Vec4(Normalize(v_xyz(m.rows[3])), m.rows[3].w);
+	nm.rows[0] = Vec4(Normalize(m.rows[0]._1.xyz), m.rows[0].w);
+	nm.rows[1] = Vec4(Normalize(m.rows[1]._1.xyz), m.rows[1].w);
+	nm.rows[2] = Vec4(Normalize(m.rows[2]._1.xyz), m.rows[2].w);
+	nm.rows[3] = Vec4(Normalize(m.rows[3]._1.xyz), m.rows[3].w);
 	return Quat::FromMat4(nm);
 }
 
@@ -824,7 +824,7 @@ Vec3 LinearToSrgb(Vec3 color) {
 }
 
 Vec4 LinearToSrgb(Vec4 color) {
-	Vec4 res = Vec4(LinearToSrgb(v_xyz(color)), color.w);
+	Vec4 res = Vec4(LinearToSrgb(color._1.xyz), color.w);
 	return res;
 }
 
@@ -838,7 +838,7 @@ Vec3 LinearToSrgb(Vec3 color, float gamma) {
 }
 
 Vec4 LinearToSrgb(Vec4 color, float gamma) {
-	Vec4 res = Vec4(LinearToSrgb(v_xyz(color), gamma), color.w);
+	Vec4 res = Vec4(LinearToSrgb(color._1.xyz, gamma), color.w);
 	return res;
 }
 
@@ -850,7 +850,7 @@ Vec3 SrgbToLinear(Vec3 color) {
 }
 
 Vec4 SrgbToLinear(Vec4 color) {
-	Vec4 res = Vec4(SrgbToLinear(v_xyz(color)), color.w);
+	Vec4 res = Vec4(SrgbToLinear(color._1.xyz), color.w);
 	return res;
 }
 
@@ -863,7 +863,7 @@ Vec3 SrgbToLinear(Vec3 color, float gamma) {
 }
 
 Vec4 SrgbToLinear(Vec4 color, float gamma) {
-	Vec4 res = Vec4(SrgbToLinear(v_xyz(color), gamma), color.w);
+	Vec4 res = Vec4(SrgbToLinear(color._1.xyz, gamma), color.w);
 	return res;
 }
 
@@ -942,11 +942,11 @@ Vec3 RgbToHsv(Vec3 c) {
 }
 
 Vec4 HsvToRgb(Vec4 c) {
-	return Vec4(HsvToRgb(v_xyz(c)), c.w);
+	return Vec4(HsvToRgb(c._1.xyz), c.w);
 }
 
 Vec4 RgbToHsv(Vec4 c) {
-	return Vec4(RgbToHsv(v_xyz(c)), c.w);
+	return Vec4(RgbToHsv(c._1.xyz), c.w);
 }
 
 //

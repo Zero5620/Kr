@@ -71,6 +71,7 @@ struct Vec3 {
 	union {
 		struct { float x, y, z; };
 		float m[3];
+		struct { Vec2 xy; float z; } _0;
 	};
 	Vec3() {}
 	Vec3(float a) : x(a), y(a), z(a) {}
@@ -83,6 +84,8 @@ struct Vec4 {
 	union {
 		struct { float x, y, z, w; };
 		float m[4];
+		struct { Vec2 xy; Vec2 zw; } _0;
+		struct { Vec3 xyz; Vec2 w; } _1;
 	};
 	Vec4() {}
 	Vec4(float a) : x(a), y(a), z(a), w(a) {}
@@ -91,11 +94,6 @@ struct Vec4 {
 	Vec4(Vec3 abc, float d): x(abc.x), y(abc.y), z(abc.z), w(d) {}
 	Vec4(float a, Vec3 bcd): x(a), y(bcd.x), z(bcd.y), w(bcd.z) {}
 };
-
-#define v_xy(v)  Vec2((v).x, (v).y)
-#define v_yz(v)  Vec2((v).y, (v).z)
-#define v_xyz(v) Vec3((v).x, (v).y, (v).z)
-#define v_yzw(v) Vec3((v).y, (v).z, (v).w)
 
 union Mat2 {
 	Vec2  rows[2];

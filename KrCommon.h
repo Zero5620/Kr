@@ -145,6 +145,10 @@ struct Memory_Allocator {
 	void *                context;
 };
 
+#ifndef THREAD_SCRATCHPAD_DEFAULT_SIZE
+#define THREAD_SCRATCHPAD_DEFAULT_SIZE MegaBytes(32)
+#endif
+
 struct Thread_Scratchpad {
 	struct Overflow {
 		void *           mem;
@@ -204,9 +208,6 @@ extern thread_local Thread_Context ThreadContext;
 //
 
 Temporary_Memory BeginTemporaryMemory();
-void EndTemporaryMemory();
-void FreeTemporaryMemory();
-
 void ResetThreadScratchpad();
 
 Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);

@@ -178,33 +178,6 @@ void FreeTemporaryMemory(Temporary_Memory *temp) {
 	MemoryArenaPackToPos(temp->arena, temp->position);
 }
 
-void ResetThreadScratchpad() {
-	size_t allocated = 0;
-
-	for (auto arena : ThreadContext.scratchpad.arenas) {
-		allocated = Maximum(allocated, MemoryArenaUsedSize(arena));
-		MemoryArenaReset(arena);
-	}
-
-	for (auto overflow = ThreadContext.scratchpad.overflow; overflow; ) {
-		allocated = Maximum(allocated, overflow->size - sizeof(*overflow));
-		auto tmp  = overflow;
-		overflow  = overflow->next;
-		MemoryFree(overflow->mem, overflow->size, overflow->allocator);
-	}
-
-	ThreadContext.scratchpad.overflow = nullptr;
-
-	if (allocated > ThreadContext.scratchpad.arenas[0]->reserved) {
-		for (auto &arena : ThreadContext.scratchpad.arenas) {
-			MemoryArenaFree(arena);
-			arena = MemoryArenaAllocate(allocated, allocated);
-		}
-	}
-
-	ThreadContext.scratchpad.max_allocated = Maximum(allocated, ThreadContext.scratchpad.max_allocated);
-}
-
 static void *MemoryArenaAllocatorAllocate(size_t size, void *context) {
 	Memory_Arena *arena = (Memory_Arena *)context;
 	return PushSizeAligned(arena, size, sizeof(size_t));
@@ -279,15 +252,24 @@ void *Thread_Context::DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem
 	}
 }
 
-void *Thread_Context::TmpMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
+static Memory_Arena *GetThreadScratchpadArena() {
 	if (!ThreadContext.scratchpad.arenas[0]) {
 		size_t initial_size = ThreadContext.scratchpad.max_allocated ? ThreadContext.scratchpad.max_allocated : MegaBytes(32);
-		for (auto &arena : ThreadContext.scratchpad.arenas)
-			arena = MemoryArenaAllocate(initial_size);
+		for (auto &arena : ThreadContext.scratchpad.arenas) {
+			arena = MemoryArenaAllocate(THREAD_SCRATCHPAD_DEFAULT_SIZE);
+			if (!arena) {
+				FatalError("MemoryArenaAllocate() - Failed to allocate memory");
+			}
+		}
 	}
 
-	Memory_Arena *arena = ThreadContext.allocator.proc != TmpMemoryAllocatorProc ?
+	Memory_Arena *arena = ThreadContext.allocator.proc != Thread_Context::TmpMemoryAllocatorProc ?
 		ThreadContext.scratchpad.arenas[0] : ThreadContext.scratchpad.arenas[1];
+	return arena;
+}
+
+void *Thread_Context::TmpMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
+	Memory_Arena *arena = GetThreadScratchpadArena();
 
 	if (kind == ALLOCATION_KIND_ALLOC || kind == ALLOCATION_KIND_REALLOC) {
 		if (arena && new_size < MemoryArenaEmptySize(arena)) {
@@ -328,6 +310,45 @@ void Thread_Context::DefaultLoggerProc(void *context, Log_Level level, const cha
 void Thread_Context::DefaultFatalError(const char *message) {
 	LogErrorEx("Fatal Error", message);
 	FatalErrorOS(message);
+}
+
+//
+//
+//
+
+Temporary_Memory BeginTemporaryMemory() {
+	Memory_Arena *arena = GetThreadScratchpadArena();
+	Temporary_Memory temp;
+	temp.arena    = arena;
+	temp.position = arena->current;
+	return temp;
+}
+
+void ResetThreadScratchpad() {
+	size_t allocated = 0;
+
+	for (auto arena : ThreadContext.scratchpad.arenas) {
+		allocated = Maximum(allocated, MemoryArenaUsedSize(arena));
+		MemoryArenaReset(arena);
+	}
+
+	for (auto overflow = ThreadContext.scratchpad.overflow; overflow; ) {
+		allocated = Maximum(allocated, overflow->size - sizeof(*overflow));
+		auto tmp = overflow;
+		overflow = overflow->next;
+		MemoryFree(overflow->mem, overflow->size, overflow->allocator);
+	}
+
+	ThreadContext.scratchpad.overflow = nullptr;
+
+	if (allocated > ThreadContext.scratchpad.arenas[0]->reserved) {
+		for (auto &arena : ThreadContext.scratchpad.arenas) {
+			MemoryArenaFree(arena);
+			arena = MemoryArenaAllocate(allocated, allocated);
+		}
+	}
+
+	ThreadContext.scratchpad.max_allocated = Maximum(allocated, ThreadContext.scratchpad.max_allocated);
 }
 
 //

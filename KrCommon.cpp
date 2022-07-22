@@ -3,7 +3,13 @@
 #include <string.h>
 #include <stdio.h>
 
-thread_local Thread_Context ThreadContext;
+thread_local Thread_Context ThreadContext = {
+	Thread_Scratchpad {}, 
+	Thread_Context::DefaultMemoryAllocator, 
+	Thread_Context::DefaultLogger,
+	Thread_Context::DefaultHandleAssertion,
+	Thread_Context::DefaultFatalError
+};
 
 void HandleAssertion(const char *file, int line, const char *proc) {
 	ThreadContext.assert_proc(file, line, proc);
@@ -172,14 +178,31 @@ void FreeTemporaryMemory(Temporary_Memory *temp) {
 	MemoryArenaPackToPos(temp->arena, temp->position);
 }
 
-Memory_Arena *ThreadScratchpad(uint32_t index) {
-	return ThreadContext.scratchpad.arena[index];
-}
-
 void ResetThreadScratchpad() {
-	for (auto thread_arena : ThreadContext.scratchpad.arena) {
-		MemoryArenaReset(thread_arena);
+	size_t allocated = 0;
+
+	for (auto arena : ThreadContext.scratchpad.arenas) {
+		allocated = Maximum(allocated, MemoryArenaUsedSize(arena));
+		MemoryArenaReset(arena);
 	}
+
+	for (auto overflow = ThreadContext.scratchpad.overflow; overflow; ) {
+		allocated = Maximum(allocated, overflow->size - sizeof(*overflow));
+		auto tmp  = overflow;
+		overflow  = overflow->next;
+		MemoryFree(overflow->mem, overflow->size, overflow->allocator);
+	}
+
+	ThreadContext.scratchpad.overflow = nullptr;
+
+	if (allocated > ThreadContext.scratchpad.arenas[0]->reserved) {
+		for (auto &arena : ThreadContext.scratchpad.arenas) {
+			MemoryArenaFree(arena);
+			arena = MemoryArenaAllocate(allocated, allocated);
+		}
+	}
+
+	ThreadContext.scratchpad.max_allocated = Maximum(allocated, ThreadContext.scratchpad.max_allocated);
 }
 
 static void *MemoryArenaAllocatorAllocate(size_t size, void *context) {
@@ -240,7 +263,6 @@ Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena) {
 	return allocator;
 }
 
-static void  InitOSContent();
 static void  FatalErrorOS(const char *message);
 static void *DefaultMemoryAllocateProc(size_t size, void *context);
 static void *DefaultMemoryReallocateProc(void *ptr, size_t previous_size, size_t new_size, void *context);
@@ -258,12 +280,41 @@ void *Thread_Context::DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem
 }
 
 void *Thread_Context::TmpMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context) {
-	for (int i = MaxThreadContextScratchpadArena - 1; i >= 0; --i) {
-		if (ThreadContext.allocator.context != ThreadContext.scratchpad.arena[i]) {
-			return MemoryArenaAllocatorProc(kind, mem, prev_size, new_size, ThreadContext.scratchpad.arena[i]);
-		}
+	if (!ThreadContext.scratchpad.arenas[0]) {
+		size_t initial_size = ThreadContext.scratchpad.max_allocated ? ThreadContext.scratchpad.max_allocated : MegaBytes(32);
+		for (auto &arena : ThreadContext.scratchpad.arenas)
+			arena = MemoryArenaAllocate(initial_size);
 	}
-	Unreachable();
+
+	Memory_Arena *arena = ThreadContext.allocator.proc != TmpMemoryAllocatorProc ?
+		ThreadContext.scratchpad.arenas[0] : ThreadContext.scratchpad.arenas[1];
+
+	if (kind == ALLOCATION_KIND_ALLOC || kind == ALLOCATION_KIND_REALLOC) {
+		if (arena && new_size < MemoryArenaEmptySize(arena)) {
+			return MemoryArenaAllocatorProc(kind, mem, prev_size, new_size, arena);
+		}
+
+		Memory_Allocator allocator = ThreadContext.allocator.proc != TmpMemoryAllocatorProc ?
+			ThreadContext.allocator : ThreadContext.DefaultMemoryAllocator;
+
+		size_t size = new_size + sizeof(Thread_Scratchpad::Overflow);
+		void *allocated_ptr = MemoryAllocate(size, allocator);
+
+		if (allocated_ptr) {
+			Thread_Scratchpad::Overflow *overflow = (Thread_Scratchpad::Overflow *)allocated_ptr;
+			overflow->mem                         = allocated_ptr;
+			overflow->size                        = size;
+			overflow->next                        = ThreadContext.scratchpad.overflow;
+			overflow->allocator                   = allocator;
+			
+			ThreadContext.scratchpad.overflow     = overflow;
+			return (uint8_t *)allocated_ptr + sizeof(Thread_Scratchpad::Overflow);
+		}
+
+		return nullptr;
+	}
+
+	MemoryArenaAllocatorFree(mem, prev_size, arena);
 	return nullptr;
 }
 
@@ -277,23 +328,6 @@ void Thread_Context::DefaultLoggerProc(void *context, Log_Level level, const cha
 void Thread_Context::DefaultFatalError(const char *message) {
 	LogErrorEx("Fatal Error", message);
 	FatalErrorOS(message);
-}
-
-void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &params) {
-	InitOSContent();
-
-	if (scratchpad_size) {
-		for (uint32_t arena_index = 0; arena_index < MaxThreadContextScratchpadArena; ++arena_index) {
-			ThreadContext.scratchpad.arena[arena_index] = MemoryArenaAllocate(scratchpad_size);
-		}
-	} else {
-		memset(&ThreadContext.scratchpad, 0, sizeof(ThreadContext.scratchpad));
-	}
-
-	ThreadContext.allocator   = params.allocator;
-	ThreadContext.logger      = params.logger;
-	ThreadContext.assert_proc = params.assert_proc;
-	ThreadContext.fatal_error = params.fatal_error;
 }
 
 //
@@ -375,11 +409,6 @@ void Thread_Context::DefaultHandleAssertion(const char *file, int line, const ch
 #define MICROSOFT_WINDOWS_WINBASE_H_DEFINE_INTERLOCKED_CPLUSPLUS_OVERLOADS 0
 #include <Windows.h>
 
-static void InitOSContent() {
-	SetConsoleCP(CP_UTF8);
-	SetConsoleOutputCP(CP_UTF8);
-}
-
 static void FatalErrorOS(const char *message) {
 	wchar_t wmessage[4096];
 	int wlen = MultiByteToWideChar(CP_UTF8, 0, message, (int)strlen(message), wmessage, 4095);
@@ -427,8 +456,6 @@ bool VirtualMemoryFree(void *ptr, size_t size) {
 #if PLATFORM_LINUX == 1 || PLATFORM_MAC == 1
 #include <sys/mman.h>
 #include <stdlib.h>
-
-static void InitOSContent() {}
 
 static void FatalErrorOS(const char *message) {
 	exit(1);

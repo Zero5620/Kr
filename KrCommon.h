@@ -133,16 +133,6 @@ Temporary_Memory BeginTemporaryMemory(Memory_Arena *arena);
 void EndTemporaryMemory(Temporary_Memory *temp);
 void FreeTemporaryMemory(Temporary_Memory *temp);
 
-#ifndef THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS
-#define THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS 2
-#endif // !THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS
-
-constexpr uint32_t MaxThreadContextScratchpadArena = Maximum(THREAD_CONTEXT_SCRATCHPAD_MAX_ARENAS, 2);
-
-struct Thread_Scratchpad {
-	Memory_Arena *arena[MaxThreadContextScratchpadArena];
-};
-
 //
 //
 //
@@ -153,6 +143,19 @@ typedef void *(*Memory_Allocator_Proc)(Allocation_Kind kind, void *mem, size_t p
 struct Memory_Allocator {
 	Memory_Allocator_Proc proc;
 	void *                context;
+};
+
+struct Thread_Scratchpad {
+	struct Overflow {
+		void *           mem;
+		ptrdiff_t        size;
+		Memory_Allocator allocator;
+		Overflow *       next;
+	};
+
+	Memory_Arena *  arenas[2]     = {};
+	Overflow *      overflow      = nullptr;
+	size_t          max_allocated = 0;
 };
 
 //
@@ -180,8 +183,6 @@ struct Thread_Context {
 	Handle_Assertion_Proc assert_proc;
 	Fatal_Error_Proc      fatal_error;
 
-	static void DefaultHandleAssertion(const char *file, int line, const char *proc);
-
 	static void *DefaultMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t prev_size, size_t new_size, void *context);
 	static constexpr Memory_Allocator DefaultMemoryAllocator = { DefaultMemoryAllocatorProc };
 
@@ -190,6 +191,8 @@ struct Thread_Context {
 
 	static void DefaultLoggerProc(void *context, Log_Level level, const char *source, const char *fmt, va_list args);
 	static constexpr Logger DefaultLogger = { DefaultLoggerProc };
+
+	static void DefaultHandleAssertion(const char *file, int line, const char *proc);
 
 	static void DefaultFatalError(const char *message);
 };
@@ -200,7 +203,10 @@ extern thread_local Thread_Context ThreadContext;
 //
 //
 
-Memory_Arena *ThreadScratchpad(uint32_t index = 0);
+Temporary_Memory BeginTemporaryMemory();
+void EndTemporaryMemory();
+void FreeTemporaryMemory();
+
 void ResetThreadScratchpad();
 
 Memory_Allocator MemoryArenaAllocator(Memory_Arena *arena);
@@ -210,26 +216,6 @@ inproc void *NullMemoryAllocatorProc(Allocation_Kind kind, void *mem, size_t pre
 }
 
 static constexpr Memory_Allocator NullMemoryAllocator = { NullMemoryAllocatorProc };
-
-//
-//
-//
-
-struct Thread_Context_Params {
-	Memory_Allocator      allocator;
-	Logger                logger;
-	Handle_Assertion_Proc assert_proc;
-	Fatal_Error_Proc      fatal_error;
-};
-
-static constexpr Thread_Context_Params ThreadContextDefaultParams = {
-	ThreadContext.DefaultMemoryAllocator,
-	ThreadContext.DefaultLogger,
-	ThreadContext.DefaultHandleAssertion,
-	ThreadContext.DefaultFatalError
-};
-
-void InitThreadContext(uint32_t scratchpad_size, const Thread_Context_Params &params = ThreadContextDefaultParams);
 
 void *MemoryAllocate(size_t size, Memory_Allocator allocator = ThreadContext.allocator);
 void *MemoryReallocate(size_t old_size, size_t new_size, void *ptr, Memory_Allocator allocator = ThreadContext.allocator);

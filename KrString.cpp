@@ -4,20 +4,20 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-String FormatStringVL(Memory_Arena *arena, const char *fmt, va_list list) {
+String FormatStringVL(Memory_Allocator allocator, const char *fmt, va_list list) {
 	va_list args;
 	va_copy(args, list);
 	int   len = 1 + vsnprintf(NULL, 0, fmt, args);
-	char *buf = (char *)PushSize(arena, len);
+	char *buf = (char *)MemoryAllocate(len, allocator);
 	vsnprintf(buf, len, fmt, list);
 	va_end(args);
 	return String(buf, len - 1);
 }
 
-String FormatString(Memory_Arena *arena, const char *fmt, ...) {
+String FormatString(Memory_Allocator allocator, const char *fmt, ...) {
 	va_list args;
 	va_start(args, fmt);
-	String string = FormatStringVL(arena, fmt, args);
+	String string = FormatStringVL(allocator, fmt, args);
 	va_end(args);
 	return string;
 }
@@ -41,15 +41,13 @@ String FormatString(const char *fmt, ...) {
 }
 
 String TmpFormatStringVL(const char *fmt, va_list list) {
-	Memory_Arena *arena = ThreadScratchpad();
-	return FormatStringVL(arena, fmt, list);
+	return FormatStringVL(ThreadContext.TmpMemoryAllocator, fmt, list);
 }
 
 String TmpFormatString(const char *fmt, ...) {
-	Memory_Arena *arena = ThreadScratchpad();
 	va_list args;
 	va_start(args, fmt);
-	String string = FormatStringVL(arena, fmt, args);
+	String string = FormatStringVL(ThreadContext.TmpMemoryAllocator, fmt, args);
 	va_end(args);
 	return string;
 }
@@ -194,8 +192,7 @@ bool StringEndsWithICase(String str, uint8_t c) {
 }
 
 char *TmpToNullTerminatedString(String str) {
-	Memory_Arena *arena = ThreadScratchpad();
-	char *cstr = (char *)PushSize(arena, str.length + 1);
+	char *cstr = (char *)MemoryAllocate(str.length + 1, ThreadContext.TmpMemoryAllocator);
 	memcpy(cstr, str.data, str.length);
 	cstr[str.length] = 0;
 	return cstr;

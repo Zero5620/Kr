@@ -2,8 +2,8 @@
 
 #include "KrCommon.h"
 
-String FormatStringVL(Memory_Arena *arena, const char *fmt, va_list list);
-String FormatString(Memory_Arena *arena, const char *fmt, ...);
+String FormatStringVL(Memory_Allocator allocator, const char *fmt, va_list list);
+String FormatString(Memory_Allocator allocator, const char *fmt, ...);
 String FormatStringVL(const char *fmt, va_list list);
 String FormatString(const char *fmt, ...);
 String TmpFormatStringVL(const char *fmt, va_list list);

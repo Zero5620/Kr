@@ -328,8 +328,10 @@ void ResetThreadScratchpad() {
 	size_t allocated = 0;
 
 	for (auto arena : ThreadContext.scratchpad.arenas) {
-		allocated = Maximum(allocated, MemoryArenaUsedSize(arena));
-		MemoryArenaReset(arena);
+		if (arena) {
+			allocated = Maximum(allocated, MemoryArenaUsedSize(arena));
+			MemoryArenaReset(arena);
+		}
 	}
 
 	for (auto overflow = ThreadContext.scratchpad.overflow; overflow; ) {
@@ -341,7 +343,7 @@ void ResetThreadScratchpad() {
 
 	ThreadContext.scratchpad.overflow = nullptr;
 
-	if (allocated > ThreadContext.scratchpad.arenas[0]->reserved) {
+	if (ThreadContext.scratchpad.arenas[0] && allocated > ThreadContext.scratchpad.arenas[0]->reserved) {
 		for (auto &arena : ThreadContext.scratchpad.arenas) {
 			MemoryArenaFree(arena);
 			arena = MemoryArenaAllocate(allocated, allocated);
